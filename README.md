@@ -2,6 +2,16 @@
 
 Welcome to the Umurava Job Frontend repository. This project is built with **Next.js**, **TypeScript**, **Tailwind CSS**, and **Redux Toolkit**. It focuses on providing a recruiter-facing interface for AI-powered talent profile screening.
 
+## 🚀 Tech Stack
+
+- **Frontend**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **State Management**: Redux Toolkit (RTK)
+- **AI Integration**: Google Gemini API
+- **Deployment**: Vercel (Recommended)
+
+
 ## 🏗️ Folder Structure
 
 We follow a **Feature-Based Modular Architecture**. This approach keeps related code together, making the application scalable and easy to maintain.
@@ -78,6 +88,29 @@ features/my-feature/
    ```bash
    npm run build
    ```
+
+## 🔐 Environment Variables
+
+Create a `.env.local` file in the root directory and add the following:
+
+```env
+NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key_here
+NEXT_PUBLIC_API_URL=your_backend_api_url_here
+```
+
+## 🤖 AI Decision Flow
+
+The application leverages the **Gemini API** to automate the screening process:
+1. **Data Ingestion**: Job requirements and applicant profiles are sent to the AI Layer.
+2. **Analysis**: Gemini parses the unstructured data and compares it against the job's weighted criteria (skills, experience, relevance).
+3. **Scoring & Ranking**: Candidates are assigned a match score (0-100) and ranked.
+4. **Reasoning**: Natural-language explanations are generated for each shortlist recommendation, highlighting strengths and gaps.
+
+## ⚠️ Assumptions and Limitations
+
+- **Data Format**: Assumes applicant profiles follow the provided Umurava Talent Schema.
+- **Parsing**: Resume parsing accuracy depends on the quality and formatting of the uploaded PDF/CSV files.
+- **AI Latency**: Screening speed is subject to Gemini API rate limits and response times.
 
 ## 📝 Coding Standards
 - Use **TypeScript** for everything. Avoid `any`.
