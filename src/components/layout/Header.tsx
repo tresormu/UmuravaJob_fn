@@ -19,9 +19,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         </button>
 
         <nav className="hidden md:flex gap-6">
-          <button className="text-primary font-bold border-b-2 border-primary pb-1">Talent Screening</button>
-          <button className="text-muted-foreground hover:text-primary transition-colors">Analytics</button>
-          <button className="text-muted-foreground hover:text-primary transition-colors">Reports</button>
+          {/* Navigation items temporarily removed for later implementation */}
         </nav>
       </div>
 
