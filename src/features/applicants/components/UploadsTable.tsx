@@ -3,48 +3,68 @@
 import { FileText, MoreVertical, ListRestart, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/utils/cn";
 
-const uploads = [
+export interface ApplicantUploadEntry {
+  id: string;
+  name: string;
+  count: number;
+  date: string;
+  status: "Parsing" | "Ready" | "Failed";
+  score: number | null;
+  source: "Platform" | "Resume" | "Spreadsheet" | "Link";
+}
+
+const seedUploads: ApplicantUploadEntry[] = [
   {
-    name: "Senior Frontend Devs",
-    count: 12,
-    date: "Uploaded 12m ago",
+    id: "seed-platform-frontend",
+    name: "Frontend Engineer - Umurava Profiles",
+    count: 24,
+    date: "Structured schema import",
     status: "Parsing",
     score: null,
-    icon: "file",
+    source: "Platform",
   },
   {
-    name: "Q3 Product Marketing",
-    count: 158,
-    date: "Uploaded 2h ago",
+    id: "seed-resume-product",
+    name: "Product Designer - External CVs",
+    count: 18,
+    date: "PDF batch upload",
     status: "Ready",
-    score: 82,
-    icon: "package",
+    score: 88,
+    source: "Resume",
   },
   {
-    name: "Python Backend (Referrals)",
-    count: 5,
-    date: "Uploaded Yesterday",
+    id: "seed-sheet-ops",
+    name: "Operations Analyst - Referral Sheet",
+    count: 41,
+    date: "CSV upload",
     status: "Ready",
-    score: 94,
-    icon: "file",
+    score: 91,
+    source: "Spreadsheet",
   },
   {
-    name: "Sales Ops Pipeline",
-    count: 0,
-    date: "Uploaded 3d ago",
+    id: "seed-link-sales",
+    name: "Sales Associate - External Links",
+    count: 9,
+    date: "Manual URL import",
     status: "Failed",
     score: null,
-    icon: "ban",
+    source: "Link",
   },
 ];
 
-export function UploadsTable() {
+interface UploadsTableProps {
+  uploads?: ApplicantUploadEntry[];
+}
+
+export function UploadsTable({ uploads = [] }: UploadsTableProps) {
+  const allUploads = [...uploads, ...seedUploads];
+
   return (
-    <div className="bg-white rounded-3xl md:rounded-[40px] border border-border shadow-sm overflow-hidden">
+    <div className="soft-panel overflow-hidden">
       <div className="p-6 md:p-10 flex items-center justify-between border-b border-border">
         <div>
-           <h3 className="text-lg md:text-xl font-bold text-primary tracking-tight">Recent Ingestion Batches</h3>
-           <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest mt-1 opacity-60">Pipeline Source History</p>
+           <h3 className="text-lg md:text-xl font-bold text-primary tracking-tight">Recent applicant sources</h3>
+           <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest mt-1 opacity-60">What is ready for screening</p>
         </div>
         <div className="flex gap-2 md:gap-4">
            <button className="p-2.5 text-muted-foreground hover:bg-secondary rounded-xl border border-transparent hover:border-border transition-all">
@@ -57,18 +77,17 @@ export function UploadsTable() {
       </div>
 
       <div className="w-full">
-        <div className="hidden md:grid grid-cols-[3fr_0.8fr_0.8fr_1.8fr_60px] px-10 py-5 bg-secondary text-[9px] uppercase font-black text-muted-foreground tracking-[0.2em] border-b border-border/50">
+        <div className="hidden md:grid grid-cols-[3fr_1fr_0.9fr_1.6fr_60px] px-10 py-5 bg-secondary text-[9px] uppercase font-black text-muted-foreground tracking-[0.2em] border-b border-border/50">
            <div className="text-left">Batch Identification</div>
-           <div className="text-center">Items</div>
+           <div className="text-center">Source</div>
            <div className="text-center">Status</div>
            <div className="text-center whitespace-nowrap">Avg Alignment</div>
            <div className="text-right">Actions</div>
         </div>
         
         <div className="divide-y divide-border/50">
-          {uploads.map((upload, i) => (
-            <div key={i} className="flex flex-col md:grid md:grid-cols-[3fr_0.8fr_0.8fr_1.8fr_60px] px-6 md:px-10 py-6 md:py-8 items-start md:items-center hover:bg-secondary/30 transition-all group gap-5 md:gap-0">
-               {/* Batch ID Dashboard */}
+          {allUploads.map((upload) => (
+            <div key={upload.id} className="flex flex-col md:grid md:grid-cols-[3fr_1fr_0.9fr_1.6fr_60px] px-6 md:px-10 py-6 md:py-8 items-start md:items-center hover:bg-secondary/30 transition-all group gap-5 md:gap-0">
                <div className="flex items-center gap-5 min-w-0 w-full md:w-auto">
                   <div className={cn(
                     "w-11 h-11 md:w-12 md:h-12 rounded-2xl flex items-center justify-center transition-all flex-shrink-0 shadow-sm border border-border group-hover:scale-110",
@@ -79,16 +98,18 @@ export function UploadsTable() {
                   <div className="truncate">
                     <h5 className="font-bold text-primary text-sm md:text-lg leading-none tracking-tight truncate">{upload.name}</h5>
                     <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-2 opacity-40">{upload.date}</p>
+                    <p className="mt-2 text-xs text-muted-foreground md:hidden">{upload.count} applicants</p>
                   </div>
                </div>
                
-               {/* Entity Count Dashboard */}
                <div className="md:text-center w-full md:w-auto flex justify-between items-center md:block px-4 py-2 md:p-0 bg-secondary/10 md:bg-transparent rounded-xl md:rounded-none">
-                  <span className="md:hidden text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Items</span>
-                  <span className="text-xs md:text-sm font-bold text-primary/60">{upload.count || 0} Files</span>
+                  <span className="md:hidden text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">Source</span>
+                  <div className="space-y-1">
+                    <span className="block text-xs md:text-sm font-bold text-primary/70">{upload.source}</span>
+                    <span className="block text-[11px] text-muted-foreground">{upload.count} applicants</span>
+                  </div>
                </div>
 
-               {/* Status Dashboard */}
                <div className="flex md:justify-center w-full md:w-auto">
                   <span className={cn(
                     "px-2.5 py-1 rounded-lg text-[9px] font-black border flex items-center gap-1.5 shadow-sm whitespace-nowrap tracking-wide uppercase",
@@ -105,7 +126,6 @@ export function UploadsTable() {
                   </span>
                </div>
 
-               {/* Alignment Dashboard */}
                <div className="flex md:justify-center items-center gap-4 w-full md:w-auto border-t md:border-none border-border/50 pt-4 md:pt-0">
                   <span className="md:hidden text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] flex-1">Avg Alignment</span>
                   <div className="flex items-center gap-3">
@@ -124,7 +144,6 @@ export function UploadsTable() {
                   </div>
                </div>
 
-               {/* More Actions Dashboard */}
                <div className="flex justify-end items-center w-full md:w-auto">
                   <span className="md:hidden text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] flex-1">Actions</span>
                   <button className={cn(

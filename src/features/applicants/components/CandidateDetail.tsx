@@ -2,24 +2,10 @@
 
 import { MatchIntensity } from "@/features/applicants/components/MatchIntensity";
 import { SkillMatrix } from "@/features/applicants/components/SkillMatrix";
-import { CheckCircle2, AlertTriangle, Download, Share2, MapPin, Briefcase, UserCheck, Zap, Target } from "lucide-react";
+import { CheckCircle2, Download, FileBadge2, IdCard, Share2, MapPin, Briefcase, UserCheck, Target } from "lucide-react";
+import { CandidateProfile } from "@/features/applicants/data/candidates";
 
-interface CandidateData {
-  name: string;
-  role: string;
-  matchScore: number;
-  matchCategory: string;
-  location: string;
-  experience: string;
-  tags: string[];
-  analysis: string;
-  culturalPulse: number;
-  retentionRisk: string;
-  strengths: { title: string; desc: string }[];
-  gaps: { title: string; desc: string }[];
-}
-
-export function CandidateDetail({ candidate }: { candidate: CandidateData }) {
+export function CandidateDetail({ candidate }: { candidate: CandidateProfile }) {
   return (
     <div className="space-y-8 max-w-6xl mx-auto pb-32">
       {/* Profile Header Dashboard */}
@@ -81,9 +67,9 @@ export function CandidateDetail({ candidate }: { candidate: CandidateData }) {
               </div>
               
               <div className="flex-1 bg-secondary p-6 md:p-10 rounded-2xl md:rounded-3xl border-l-[6px] border-primary relative overflow-hidden">
-                 <div className="absolute -top-6 -left-2 text-primary/5 text-8xl md:text-[120px] font-serif leading-none">"</div>
+                 <div className="absolute -top-6 -left-2 text-primary/5 text-8xl md:text-[120px] font-serif leading-none">&ldquo;</div>
                  <p className="text-primary italic text-lg md:text-xl leading-relaxed relative z-10 font-medium">
-                   "{candidate.analysis}"
+                   &ldquo;{candidate.analysis}&rdquo;
                  </p>
               </div>
 
@@ -95,6 +81,23 @@ export function CandidateDetail({ candidate }: { candidate: CandidateData }) {
                  <div className="bg-secondary/50 p-4 md:p-6 rounded-xl md:rounded-2xl border border-border">
                     <p className="text-[9px] md:text-[10px] uppercase font-bold text-muted-foreground tracking-widest mb-1.5">Employment Stability</p>
                     <p className="text-xl md:text-2xl font-bold text-primary">{candidate.retentionRisk}</p>
+                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-8 mt-4">
+                 <div className="bg-secondary/50 p-4 md:p-6 rounded-xl md:rounded-2xl border border-border">
+                    <div className="flex items-center gap-2 text-primary">
+                      <FileBadge2 className="w-4 h-4" />
+                      <p className="text-[9px] md:text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Resume ID</p>
+                    </div>
+                    <p className="mt-2 text-lg md:text-xl font-bold text-primary">{candidate.resumeId}</p>
+                 </div>
+                 <div className="bg-secondary/50 p-4 md:p-6 rounded-xl md:rounded-2xl border border-border">
+                    <div className="flex items-center gap-2 text-primary">
+                      <IdCard className="w-4 h-4" />
+                      <p className="text-[9px] md:text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Passport ID</p>
+                    </div>
+                    <p className="mt-2 text-lg md:text-xl font-bold text-primary">{candidate.passportId}</p>
                  </div>
               </div>
            </div>
@@ -175,4 +178,3 @@ export function CandidateDetail({ candidate }: { candidate: CandidateData }) {
     </div>
   );
 }
-

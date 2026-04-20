@@ -7,6 +7,7 @@ import {
   Briefcase, 
   Users, 
   BarChart3, 
+  Sparkles,
   Settings, 
   PlusCircle,
   ChevronRight,
@@ -19,6 +20,7 @@ const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Jobs", href: "/jobs", icon: Briefcase },
   { label: "Applicants", href: "/applicants", icon: Users },
+  { label: "Screening", href: "/screening", icon: Sparkles },
   { label: "Shortlists", href: "/shortlists", icon: BarChart3 },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
@@ -55,13 +57,13 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
           isCollapsed ? "justify-center" : "justify-between"
         )}>
           <Link href="/" className="flex items-center gap-4 group">
-            <div className="w-11 h-11 bg-primary rounded-xl flex items-center justify-center shadow-sm shrink-0 transition-transform group-hover:scale-105">
-              <span className="text-white font-black text-2xl tracking-tighter">U</span>
+            <div className="w-11 h-11 bg-primary rounded-2xl flex items-center justify-center shadow-sm shrink-0 transition-transform group-hover:scale-105">
+              <span className="text-white font-black text-sm tracking-[0.2em]">US</span>
             </div>
             {!isCollapsed && (
               <div className="animate-in fade-in slide-in-from-left-2 duration-300">
-                <h1 className="font-black text-primary leading-none tracking-tight text-xl uppercase">Umurava</h1>
-                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] mt-1.5 opacity-60">Talent Analytics</p>
+                <h1 className="font-black text-primary leading-none tracking-tight text-xl">Umurava Screen</h1>
+                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] mt-1.5 opacity-60">AI Hiring Workspace</p>
               </div>
             )}
           </Link>
@@ -74,7 +76,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
         <div className="flex-1 py-6 space-y-8 overflow-y-auto no-scrollbar relative px-4">
           <div>
             {!isCollapsed && (
-              <p className="px-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4 opacity-40 animate-in fade-in duration-500">Main Menu</p>
+              <p className="px-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4 opacity-40 animate-in fade-in duration-500">Recruiter Workspace</p>
             )}
             <nav className="space-y-1.5">
               {navItems.map((item) => {
@@ -112,6 +114,15 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
               })}
             </nav>
           </div>
+
+          {!isCollapsed && (
+            <div className="mx-2 rounded-3xl bg-primary p-5 text-white shadow-sm">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-white/50 font-bold mb-3">Hackathon Goal</p>
+              <p className="text-sm leading-relaxed text-white/85">
+                Help recruiters review applicants faster without hiding the final decision from humans.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer Actions Dashboard */}

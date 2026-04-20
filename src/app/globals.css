@@ -4,29 +4,29 @@
 
 @layer base {
   :root {
-    --primary: 215 32% 17%; /* Deep Professional Slate */
+    --primary: 196 64% 18%;
     --primary-foreground: 210 40% 98%;
-    
-    --secondary: 210 20% 98%; /* Clean Neutral */
+
+    --secondary: 45 33% 97%;
     --secondary-foreground: 215 32% 17%;
 
-    --muted: 210 20% 94%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 42 20% 92%;
+    --muted-foreground: 206 15% 41%;
 
-    --accent: 180 40% 40%; /* Sophisticated Deep Teal */
+    --accent: 24 90% 45%;
     --accent-foreground: 210 40% 98%;
 
-    --background: 0 0% 100%;
+    --background: 45 33% 98%;
     --foreground: 222 47% 11%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 215 32% 17%;
+    --border: 40 17% 86%;
+    --input: 40 17% 86%;
+    --ring: 196 64% 18%;
 
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
     
-    --radius: 1rem;
+    --radius: 1.1rem;
   }
 }
 
@@ -36,8 +36,9 @@
     @apply border-border;
   }
   body {
-    @apply bg-[#F4F7F9] text-foreground antialiased;
+    @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: "Sora", "Avenir Next", "Segoe UI", sans-serif;
   }
 }
 
@@ -52,6 +53,10 @@
 
   .premium-shadow-lg {
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  }
+
+  .soft-panel {
+    @apply bg-white border border-border rounded-3xl shadow-sm;
   }
 
   .nav-item-active {

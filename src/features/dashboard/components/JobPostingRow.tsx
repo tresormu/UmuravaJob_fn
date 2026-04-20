@@ -1,5 +1,5 @@
 import { MoreVertical, Code2, Palette, Microscope } from "lucide-react";
-import { cn } from "@/utils/cn";
+import Link from "next/link";
 
 interface JobPostingRowProps {
   title: string;
@@ -29,11 +29,14 @@ export function JobPostingRow({
   icon 
 }: JobPostingRowProps) {
   const Icon = icons[icon];
+  const actionHref = progress === 100 ? "/shortlists" : `/screening?role=${encodeURIComponent(title)}`;
+  const actionLabel = progress === 100 ? "Review shortlist" : "Start screening";
+  const actionClassName = progress === 100 ? "btn-primary" : "btn-accent";
 
   return (
-    <div className="bg-white p-4 md:p-6 rounded-2xl border border-border premium-shadow flex flex-col xl:flex-row xl:items-center gap-4 md:gap-6 group hover:border-primary/20 transition-all">
+    <div className="soft-panel group flex flex-col gap-4 p-4 transition-all hover:border-primary/20 md:gap-6 md:p-6 xl:flex-row xl:items-center">
       <div className="flex items-center gap-4 md:gap-6">
-        <div className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all flex-shrink-0">
+        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-secondary text-primary transition-all group-hover:bg-primary group-hover:text-white">
           <Icon className="w-6 h-6" />
         </div>
 
@@ -48,7 +51,7 @@ export function JobPostingRow({
       <div className="flex flex-col md:flex-row xl:flex-1 gap-4 md:gap-8 xl:items-center w-full">
         <div className="flex-1 max-w-full xl:max-w-xs">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-[10px] font-semibold text-primary/60 uppercase tracking-tighter">Screening Progress</span>
+            <span className="text-[10px] font-semibold text-primary/60 uppercase tracking-tighter">Screening progress</span>
             <span className="text-xs font-bold text-primary">{progress}%</span>
           </div>
           <div className="h-1.5 md:h-2 bg-secondary rounded-full overflow-hidden">
@@ -72,15 +75,9 @@ export function JobPostingRow({
       </div>
 
       <div className="flex items-center justify-between xl:justify-end gap-3 border-t border-border/50 pt-4 xl:border-none xl:pt-0">
-        {progress === 100 ? (
-          <button className="flex-1 xl:flex-none btn-primary btn-sm">
-            Review Matches
-          </button>
-        ) : (
-          <button className="flex-1 xl:flex-none btn-accent btn-sm">
-            Screen Now
-          </button>
-        )}
+        <Link href={actionHref} className={`flex-1 xl:flex-none ${actionClassName} btn-sm`}>
+          {actionLabel}
+        </Link>
         <button className="p-2 text-muted-foreground hover:bg-secondary rounded-full">
           <MoreVertical className="w-5 h-5" />
         </button>

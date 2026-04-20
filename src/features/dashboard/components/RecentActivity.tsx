@@ -1,25 +1,25 @@
 export function RecentActivity() {
   const activities = [
     {
-      title: "12 New Applicants",
-      description: "UX Designer role • 2 hours ago",
+      title: "Structured profiles imported",
+      description: "24 Umurava profiles mapped to Frontend Engineer role",
       type: "new",
     },
     {
-      title: "Interview Scheduled",
-      description: "Alex Johnson • Tomorrow, 10:00 AM",
+      title: "Shortlist ready for review",
+      description: "Top 10 candidates prepared with reasoning notes",
       type: "event",
     },
     {
-      title: "Screening Complete",
-      description: "Backend Team Lead • Yesterday",
+      title: "Resume batch parsing completed",
+      description: "External PDF applicants normalized for recruiter review",
       type: "complete",
     },
   ];
 
   return (
-    <div className="bg-white p-8 rounded-3xl border border-border premium-shadow h-full flex flex-col">
-      <h3 className="font-bold text-lg text-primary mb-8">Recent Activity</h3>
+    <div className="soft-panel flex h-full flex-col p-8">
+      <h3 className="mb-8 text-lg font-bold text-primary">Recent activity</h3>
       
       <div className="space-y-8 flex-1">
         {activities.map((activity, i) => (
@@ -37,7 +37,7 @@ export function RecentActivity() {
       </div>
 
       <button className="mt-auto pt-6 text-primary font-bold text-xs uppercase tracking-widest hover:underline text-center w-full">
-        View Timeline
+        View workflow
       </button>
     </div>
   );

@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 
-const inter = Inter({ subsets: ["latin"] });
-
 export const metadata: Metadata = {
-  title: "Umurava AI | High-Fidelity Recruiter Dashboard",
-  description: "Advanced AI-driven recruitment platform for elite talent curation and strategic job matching.",
+  title: "Umurava Screen",
+  description:
+    "Recruiter workspace for AI-assisted applicant screening, explainable shortlists, and human-led hiring decisions.",
 };
 
 export default function RootLayout({
@@ -17,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body>
         <AppShell>
           {children}
         </AppShell>
@@ -25,4 +23,3 @@ export default function RootLayout({
     </html>
   );
 }
-
