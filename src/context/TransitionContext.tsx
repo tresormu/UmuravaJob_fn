@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 interface TransitionContextType {
@@ -10,18 +10,27 @@ interface TransitionContextType {
 
 const TransitionContext = createContext<TransitionContextType | undefined>(undefined);
 
-export function TransitionProvider({ children }: { children: React.ReactNode }) {
-  const [isTransitioning, setIsTransitioning] = useState(false);
+function TransitionListener() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { setIsTransitioning } = useTransition();
 
   // Reset transition state when the path or search params change
-  useEffect(() => {
+  React.useEffect(() => {
     setIsTransitioning(false);
-  }, [pathname, searchParams]);
+  }, [pathname, searchParams, setIsTransitioning]);
+
+  return null;
+}
+
+export function TransitionProvider({ children }: { children: React.ReactNode }) {
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   return (
     <TransitionContext.Provider value={{ isTransitioning, setIsTransitioning }}>
+      <Suspense fallback={null}>
+        <TransitionListener />
+      </Suspense>
       {children}
     </TransitionContext.Provider>
   );

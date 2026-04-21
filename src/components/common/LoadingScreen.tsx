@@ -1,11 +1,11 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useTransition } from "@/context/TransitionContext";
 
-export function LoadingScreen() {
+function LoadingScreenContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { isTransitioning } = useTransition();
@@ -68,5 +68,13 @@ export function LoadingScreen() {
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+export function LoadingScreen() {
+  return (
+    <Suspense fallback={null}>
+      <LoadingScreenContent />
+    </Suspense>
   );
 }
