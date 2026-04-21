@@ -159,7 +159,7 @@ export function AuthPage() {
               <h3 className="text-3xl font-black tracking-tight">Explainable AI</h3>
             </div>
             <p className="text-lg text-muted-foreground font-medium leading-relaxed">
-              Every candidate ranking comes with a detailed natural language explanation. Understand the "why" behind every match.
+              Every candidate ranking comes with a detailed natural language explanation. Understand the &quot;why&quot; behind every match.
             </p>
           </motion.div>
         </div>

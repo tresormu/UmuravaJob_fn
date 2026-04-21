@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Sparkles, Cpu, Zap, Shield, Search, BarChart3, Users, Globe, ArrowRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -78,9 +79,12 @@ export function LandingPage({ onGetStarted }: { onGetStarted: () => void }) {
             transition={{ duration: 1.5, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
             className="mt-24 relative p-1 bg-white/40 backdrop-blur-3xl rounded-[3rem] border border-white/50 shadow-2xl overflow-hidden"
           >
-            <img 
+            <Image 
               src="https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=1932&auto=format&fit=crop" 
               alt="Platform Preview" 
+              width={1932}
+              height={1080}
+              priority
               className="w-full h-auto rounded-[2.8rem] grayscale opacity-80"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />

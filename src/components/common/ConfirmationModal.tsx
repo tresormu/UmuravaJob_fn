@@ -12,7 +12,7 @@ interface ConfirmationModalProps {
   description: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  variant?: "danger" | "warning" | "info";
+  variant?: "danger" | "warning" | "info" | "primary";
 }
 
 export function ConfirmationModal({

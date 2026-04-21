@@ -19,7 +19,7 @@ export default function ShortlistPage() {
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
             The shortlist screen provides consistent ranking, clear strengths, and
-            visible gaps, allowing recruiters to maintain final oversight of the AI's recommendations.
+            visible gaps, allowing recruiters to maintain final oversight of the AI&apos;s recommendations.
           </p>
           <div className="mt-6">
             <button className="btn-base btn-md bg-white border border-border text-primary font-black uppercase tracking-widest px-6 hover:bg-secondary transition-all shadow-sm">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Bot,
@@ -22,6 +22,7 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { CandidateProfile } from "@/features/applicants/data/candidates";
 import { cn } from "@/utils/cn";
+import { screeningService } from "@/services/screeningService";
 
 interface ScreeningWorkspaceProps {
   applicants: CandidateProfile[];
@@ -40,6 +41,7 @@ export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps
   const [isScreened, setIsScreened] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [prompt, setPrompt] = useState(initialPrompt);
   const [lastRunLabel, setLastRunLabel] = useState<string | null>(null);
   const [displayApplicants, setDisplayApplicants] = useState<CandidateProfile[]>(applicants);
   const [messages, setMessages] = useState<TranscriptMessage[]>([
