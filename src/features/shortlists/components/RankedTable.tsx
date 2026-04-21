@@ -93,49 +93,6 @@ export function RankedTable() {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2 self-start md:self-end">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setDecisions((current) => ({
-                        ...current,
-                        [candidate.slug]: "Approved",
-                      }))
-                    }
-                    className={cn(
-                      "btn-base btn-sm border",
-                      decision === "Approved"
-                        ? "btn-primary border-primary"
-                        : "btn-secondary border-emerald-200 text-emerald-700 hover:bg-emerald-50",
-                    )}
-                  >
-                    Approve
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setDecisions((current) => ({
-                        ...current,
-                        [candidate.slug]: "Rejected",
-                      }))
-                    }
-                    className={cn(
-                      "btn-base btn-sm border",
-                      decision === "Rejected"
-                        ? "bg-red-600 text-white"
-                        : "btn-secondary border-red-200 text-red-600 hover:bg-red-50",
-                    )}
-                  >
-                    Reject
-                  </button>
-                  <Link
-                    href={`/applicants/${candidate.slug}`}
-                    className="btn-primary md:btn-secondary btn-sm gap-2 whitespace-nowrap shadow-sm transition-all group/btn"
-                  >
-                    Review profile
-                    <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                  </Link>
-                </div>
               </div>
             </div>
           );

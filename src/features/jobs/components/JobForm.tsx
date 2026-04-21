@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, SlidersHorizontal, Sparkles, Target } from "lucide-react";
+import { ArrowLeft, Plus, SlidersHorizontal, Sparkles, Target, HelpCircle, Trash2, Bot } from "lucide-react";
+import { useUI } from "@/context/UIContext";
 
 export function JobForm() {
+  const { setIsAIChatOpen } = useUI();
   const [formData, setFormData] = useState({
     title: "",
     department: "Engineering",
@@ -15,6 +17,9 @@ export function JobForm() {
     shortlistSize: "Top 10",
     recruiterNotes: "",
   });
+  
+  const [questions, setQuestions] = useState<string[]>([]);
+  const [newQuestion, setNewQuestion] = useState("");
 
   const [skills, setSkills] = useState(["React.js", "TypeScript", "API integration"]);
   const [softSkills, setSoftSkills] = useState(["Communication", "Ownership"]);
@@ -62,7 +67,7 @@ export function JobForm() {
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="e.g. Senior Frontend Engineer"
-                  className="w-full rounded-2xl border border-border bg-secondary px-4 py-3.5 text-sm text-primary outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-none border border-border bg-secondary px-4 py-3.5 text-sm text-primary outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </label>
               <label className="space-y-2">
@@ -71,7 +76,7 @@ export function JobForm() {
                   type="text"
                   value={formData.department}
                   onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  className="w-full rounded-2xl border border-border bg-secondary px-4 py-3.5 text-sm text-primary outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-none border border-border bg-secondary px-4 py-3.5 text-sm text-primary outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </label>
               <label className="space-y-2">
@@ -80,7 +85,7 @@ export function JobForm() {
                   type="text"
                   value={formData.workType}
                   onChange={(e) => setFormData({ ...formData, workType: e.target.value })}
-                  className="w-full rounded-2xl border border-border bg-secondary px-4 py-3.5 text-sm text-primary outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-none border border-border bg-secondary px-4 py-3.5 text-sm text-primary outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </label>
               <label className="space-y-2">
@@ -89,7 +94,7 @@ export function JobForm() {
                   type="text"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="w-full rounded-2xl border border-border bg-secondary px-4 py-3.5 text-sm text-primary outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-none border border-border bg-secondary px-4 py-3.5 text-sm text-primary outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </label>
             </div>
@@ -100,7 +105,7 @@ export function JobForm() {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Describe the mission, outcomes, and what good performance looks like."
-                className="w-full rounded-2xl border border-border bg-secondary px-4 py-3.5 text-sm leading-7 text-primary outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-none border border-border bg-secondary px-4 py-3.5 text-sm leading-7 text-primary outline-none focus:ring-2 focus:ring-primary/20"
               />
             </label>
           </div>
@@ -149,102 +154,106 @@ export function JobForm() {
               </button>
             </div>
 
-            <div className="mt-6 grid gap-5 md:grid-cols-2">
+            <div className="mt-6 grid gap-5 md:grid-cols-1">
               <label className="space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Experience range</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Minimum experience</span>
                 <input
                   type="text"
                   value={formData.experienceRange}
                   onChange={(e) => setFormData({ ...formData, experienceRange: e.target.value })}
-                  className="w-full rounded-2xl border border-border bg-secondary px-4 py-3.5 text-sm text-primary outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </label>
-              <label className="space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Shortlist output</span>
-                <input
-                  type="text"
-                  value={formData.shortlistSize}
-                  onChange={(e) => setFormData({ ...formData, shortlistSize: e.target.value })}
-                  className="w-full rounded-2xl border border-border bg-secondary px-4 py-3.5 text-sm text-primary outline-none focus:ring-2 focus:ring-primary/20"
+                  placeholder="e.g. 3-5 years"
+                  className="w-full rounded-none border border-border bg-secondary px-4 py-3.5 text-sm text-primary outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </label>
             </div>
           </div>
 
+
           <div className="soft-panel p-6 md:p-8">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-primary/5 p-2 text-primary">
-                <Target className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-primary">Recruiter notes for AI screening</h3>
-                <p className="text-sm text-muted-foreground">
-                  Capture trade-offs, deal-breakers, and context the model should explain clearly.
-                </p>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-none bg-accent/5 p-2 text-accent">
+                  <HelpCircle className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-primary">Screening questions</h3>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-accent px-2 py-0.5 bg-accent/5 rounded-full">Optional</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Ask candidates specific questions to gather more signals and context.
+                  </p>
+                </div>
               </div>
             </div>
-            <textarea
-              rows={7}
-              value={formData.recruiterNotes}
-              onChange={(e) => setFormData({ ...formData, recruiterNotes: e.target.value })}
-              placeholder="Example: Prioritize candidates who have led production frontend work, but allow strong product sense to offset weaker years of experience."
-              className="mt-5 w-full rounded-2xl border border-border bg-secondary px-4 py-3.5 text-sm leading-7 text-primary outline-none focus:ring-2 focus:ring-primary/20"
-            />
+            
+            <div className="mt-8 space-y-4">
+              {questions.map((q, idx) => (
+                <div key={idx} className="flex items-center gap-4 p-4 bg-secondary/50 rounded-none group">
+                  <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-xs font-black text-primary shadow-sm">{idx + 1}</span>
+                  <p className="flex-1 text-sm font-bold text-primary">{q}</p>
+                  <button 
+                    onClick={() => setQuestions(questions.filter((_, i) => i !== idx))}
+                    className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100 rounded-xl"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              
+              <div className="flex gap-3">
+                <input
+                  value={newQuestion}
+                  onChange={(e) => setNewQuestion(e.target.value)}
+                  placeholder="Type a question recruiters should ask..."
+                  className="flex-1 rounded-none border border-border bg-secondary px-4 py-3.5 text-sm text-primary outline-none focus:ring-2 focus:ring-primary/20"
+                />
+                <button 
+                  onClick={() => {
+                    if (newQuestion.trim()) {
+                      setQuestions([...questions, newQuestion.trim()]);
+                      setNewQuestion("");
+                    }
+                  }}
+                  className="btn-secondary btn-md gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 pt-6">
+            <button className="btn-secondary btn-lg flex-1">Save draft</button>
+            <button className="btn-primary btn-lg flex-1">Start screening setup</button>
           </div>
         </div>
 
         <div className="space-y-6">
-          <div className="soft-panel p-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-primary/5 p-2 text-primary">
-                <SlidersHorizontal className="h-5 w-5" />
+          <div className="soft-panel p-6 bg-primary/5 border-primary/10">
+            <div className="flex flex-col gap-4">
+              <div className="w-12 h-12 bg-white rounded-none flex items-center justify-center text-primary shadow-sm">
+                <Bot className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-primary">Scoring blueprint</h3>
-                <p className="text-xs text-muted-foreground">Useful for backend handoff and Gemini prompt design.</p>
+                <h4 className="font-bold text-primary text-base">Maximize your job brief</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed mt-1">
+                  Our AI can help you draft better requirements and screening questions to attract high-quality matching talent.
+                </p>
               </div>
+              <button 
+                onClick={() => setIsAIChatOpen(true)}
+                className="btn-primary btn-md w-full gap-2 mt-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                Ask AI Assistant
+              </button>
             </div>
-            <div className="mt-5 space-y-4">
-              {Object.entries(weights).map(([key, value]) => (
-                <div key={key} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-bold capitalize text-primary">{key}</span>
-                    <span className="text-muted-foreground">{value}%</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-secondary">
-                    <div className="h-full rounded-full bg-primary" style={{ width: `${value}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="soft-panel p-6">
-            <div className="flex items-center gap-2 text-primary">
-              <Sparkles className="h-4 w-4 text-accent" />
-              <h3 className="font-bold">Output expectations</h3>
-            </div>
-            <ul className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
-              <li>Rank candidates using a consistent scoring rubric.</li>
-              <li>Show strengths, gaps, and role relevance for each shortlisted candidate.</li>
-              <li>Keep final hiring decisions with the recruiter, not the model.</li>
-            </ul>
-          </div>
-
-          <div className="rounded-3xl bg-primary p-6 text-white shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Ready for backend integration</p>
-            <p className="mt-3 text-sm leading-7 text-white/85">
-              This UI is now structured so your teammate can connect form data to API routes,
-              persistence, and Gemini orchestration without redesigning the screen.
-            </p>
-          </div>
-
-          <div className="flex gap-3">
-            <button className="btn-secondary btn-lg flex-1">Save draft</button>
-            <button className="btn-primary btn-lg flex-1">Start screening setup</button>
           </div>
         </div>
       </div>
     </div>
   );
 }
+

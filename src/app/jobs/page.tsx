@@ -1,8 +1,14 @@
+"use client";
+
+import { useState } from "react";
 import { JobPostingRow } from "@/features/dashboard/components/JobPostingRow";
-import { Plus, Search, Filter, Sparkles } from "lucide-react";
+import { Plus, Search, Filter, Sparkles, X } from "lucide-react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function JobsPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  
   const jobs = [
     {
       title: "Senior Frontend Engineer",
@@ -46,66 +52,121 @@ export default function JobsPage() {
     },
   ];
 
-  return (
-    <div className="mx-auto max-w-6xl space-y-8 pb-10">
-      <div className="soft-panel grid gap-6 p-6 md:grid-cols-[1.4fr_0.8fr] md:p-8">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Job intake</p>
-          <h2 className="mt-3 text-3xl font-black text-primary">Build role briefs recruiters can trust.</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
-            Keep the setup simple: define the role, capture the must-have signals, and prepare
-            a clean scoring model that your backend team can later wire into Gemini.
-          </p>
-        </div>
-        <div className="rounded-3xl border border-border bg-secondary p-5">
-          <div className="flex items-center gap-2 text-primary">
-            <Sparkles className="h-4 w-4 text-accent" />
-            <p className="text-sm font-bold">Suggested scoring model</p>
-          </div>
-          <div className="mt-4 space-y-3 text-sm text-muted-foreground">
-            <p>Skills fit: 40%</p>
-            <p>Relevant experience: 30%</p>
-            <p>Role relevance and impact: 20%</p>
-            <p>Education and certifications: 10%</p>
-          </div>
-        </div>
-      </div>
+  const filteredJobs = jobs.filter(job => 
+    job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    job.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    job.location.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+  return (
+    <div className="mx-auto max-w-6xl space-y-12 pb-10">
+      <section className="relative overflow-hidden p-1 bg-primary rounded-[3rem] shadow-2xl shadow-primary/10">
+        <div className="bg-white rounded-[2.8rem] p-8 md:p-12 grid gap-10 md:grid-cols-[1.4fr_0.8fr]">
+           <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-accent/10 rounded-full">
+                <Sparkles className="w-3 h-3 text-accent" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-accent">Intelligent Sourcing</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black text-primary tracking-tighter leading-[1.1]">Build roles recruiters <span className="text-accent underline decoration-accent/20 underline-offset-8">trust.</span></h2>
+              <p className="text-muted-foreground font-medium text-lg leading-relaxed max-w-xl">
+                 Capture the exact signals needed for high-fidelity AI screening. Define your scoring blueprint early to ensure explainable shortlists.
+              </p>
+           </div>
+           <div className="bg-secondary/50 rounded-[2.5rem] p-8 border border-border/50 self-center">
+              <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-6">Suggested Blueprint</h4>
+              <div className="space-y-4">
+                 {[
+                   { label: "Skills Fit", val: 40 },
+                   { label: "Experience", val: 30 },
+                   { label: "Relevance", val: 20 },
+                   { label: "Education", val: 10 },
+                 ].map((s) => (
+                   <div key={s.label} className="space-y-1.5">
+                      <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                         <span>{s.label}</span>
+                         <span className="text-accent">{s.val}%</span>
+                      </div>
+                      <div className="h-1.5 bg-white rounded-full overflow-hidden">
+                         <div className="h-full bg-accent rounded-full" style={{ width: `${s.val}%` }}></div>
+                      </div>
+                   </div>
+                 ))}
+              </div>
+           </div>
+        </div>
+      </section>
+
+      <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
         <div>
-          <h3 className="text-2xl font-bold text-primary">Open jobs</h3>
-          <p className="text-sm text-muted-foreground">
-            {jobs.length} active positions currently feeding the screening workflow.
+          <h3 className="text-3xl font-black text-primary tracking-tight">Active Job Board</h3>
+          <p className="text-muted-foreground font-medium mt-1">
+            Managing <span className="text-primary font-black underline decoration-accent/30 underline-offset-4">{filteredJobs.length}</span> positions with live screening pipelines.
           </p>
         </div>
         <Link
           href="/jobs/create"
-          className="flex items-center gap-2 rounded-2xl bg-primary px-8 py-4 font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90"
+          className="btn-primary btn-lg gap-3"
         >
           <Plus className="h-5 w-5" />
-          New job brief
+          Create new brief
         </Link>
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="relative flex-1 group">
+          <Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <input
             type="text"
-            placeholder="Search by role, department, or keyword..."
-            className="w-full rounded-xl border border-border bg-white py-3.5 pl-12 pr-4 text-sm outline-none transition-all focus:ring-2 focus:ring-primary/20"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Filter roles, departments, or locations..."
+            className="w-full rounded-[1.5rem] border border-border/50 bg-white py-4 pl-14 pr-12 text-sm font-medium outline-none transition-all focus:ring-4 focus:ring-primary/5 focus:border-primary/20 shadow-sm"
           />
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery("")}
+              className="absolute right-5 top-1/2 -translate-y-1/2 p-2 hover:bg-secondary rounded-xl transition-all"
+            >
+              <X className="w-4 h-4 text-muted-foreground" />
+            </button>
+          )}
         </div>
-        <button className="flex items-center gap-2 rounded-xl border border-border bg-white px-6 py-3.5 text-sm font-bold text-primary transition-all hover:bg-secondary">
+        <button className="flex items-center gap-2 rounded-[1.5rem] border border-border/50 bg-white px-8 py-4 text-sm font-black uppercase tracking-widest text-primary transition-all hover:bg-secondary shadow-sm">
           <Filter className="h-4 w-4" />
           Filter
         </button>
       </div>
 
-      <div className="space-y-4">
-        {jobs.map((job, i) => (
-          <JobPostingRow key={i} {...job} />
-        ))}
+      <div className="space-y-6">
+        <AnimatePresence mode="popLayout">
+          {filteredJobs.map((job, i) => (
+            <motion.div
+              key={job.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ delay: i * 0.05 }}
+            >
+              <JobPostingRow {...job} />
+            </motion.div>
+          ))}
+        </AnimatePresence>
+        
+        {filteredJobs.length === 0 && (
+          <div className="py-20 text-center space-y-4">
+             <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mx-auto mb-6">
+                <Search className="w-8 h-8 text-muted-foreground" />
+             </div>
+             <h4 className="text-xl font-black text-primary">No positions found</h4>
+             <p className="text-muted-foreground max-w-xs mx-auto">We couldn&apos;t find any job briefs matching &quot;{searchQuery}&quot;. Try a different keyword.</p>
+             <button 
+              onClick={() => setSearchQuery("")}
+              className="text-accent font-black text-xs uppercase tracking-widest hover:underline pt-4"
+             >
+               Clear search filter
+             </button>
+          </div>
+        )}
       </div>
     </div>
   );

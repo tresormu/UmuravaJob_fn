@@ -1,60 +1,101 @@
-import { User, ChevronRight } from "lucide-react";
+import { User, ChevronRight, Star, Trash2 } from "lucide-react";
 import { cn } from "@/utils/cn";
 
 interface CandidateRowProps {
+  id: string;
   rank: string;
   name: string;
   role: string;
   score: number;
   tags: string[];
   status: "Elite" | "High" | "Good";
+  isShortlisted?: boolean;
+  onShortlistToggle?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onViewDetails?: (id: string) => void;
 }
 
-const statusColors = {
-  Elite: "text-primary border-primary bg-primary/10",
-  High: "text-[#B05B2F] border-[#B05B2F] bg-[#B05B2F]/10",
-  Good: "text-muted-foreground border-muted-foreground bg-muted/10",
-};
-
-export function CandidateRow({ rank, name, role, score, tags, status }: CandidateRowProps) {
+export function CandidateRow({ 
+  id,
+  rank, 
+  name, 
+  role, 
+  score, 
+  tags, 
+  status,
+  isShortlisted,
+  onShortlistToggle,
+  onDelete,
+  onViewDetails
+}: CandidateRowProps) {
   return (
-    <div className="bg-white p-5 rounded-2xl border border-border premium-shadow flex items-center gap-6 group hover:border-primary/20 transition-all">
+    <div className={cn(
+      "bg-white p-5 rounded-2xl border transition-all font-inter flex items-center gap-6 group relative mb-4 shadow-sm",
+      isShortlisted ? "border-accent bg-accent/[0.02]" : "border-border hover:border-primary/20"
+    )}>
       <div className="text-3xl font-bold text-muted-foreground/30 w-12 text-center">{rank}</div>
       
-      <div className="flex items-center gap-4 flex-1">
-        <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all overflow-hidden border border-border">
+      <div className="flex items-center gap-4 flex-1 min-w-0">
+        <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all overflow-hidden border border-border flex-shrink-0">
           <User className="w-6 h-6" />
         </div>
-        <div>
-          <h4 className="font-bold text-primary">{name}</h4>
-          <p className="text-xs text-muted-foreground">{role}</p>
+        <div className="truncate">
+          <h4 className="font-bold text-primary truncate">{name}</h4>
+          <p className="text-xs text-muted-foreground truncate">{role}</p>
         </div>
       </div>
 
-      <div className="flex-1 max-w-[200px]">
+      <div className="flex-1 max-w-[180px] hidden md:block">
         <div className="flex justify-between items-center mb-1.5">
-          <p className="text-sm font-bold text-primary">{score} <span className="text-[10px] font-medium opacity-60">{status}</span></p>
+          <p className="text-sm font-bold text-primary">{score}% <span className="text-[10px] font-medium opacity-60 ml-1">{status}</span></p>
         </div>
         <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
           <div 
-            className="h-full bg-primary rounded-full" 
+            className={cn(
+              "h-full rounded-full transition-all duration-1000",
+              status === "Elite" ? "bg-accent" : "bg-primary"
+            )} 
             style={{ width: `${score}%` }} 
           />
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 flex-[1.5] justify-center">
-        {tags.map(tag => (
-          <span key={tag} className="text-[10px] uppercase font-bold text-primary/60 bg-secondary/50 px-3 py-1 rounded-md tracking-wider">
+      <div className="hidden lg:flex flex-wrap gap-2 flex-1 justify-center">
+        {tags.slice(0, 3).map(tag => (
+          <span key={tag} className="text-[9px] uppercase font-bold text-primary/60 bg-secondary/50 px-2.5 py-1 rounded-md tracking-wider whitespace-nowrap">
             {tag}
           </span>
         ))}
       </div>
 
-      <div className="flex items-center gap-4">
-        <button className="bg-secondary text-primary px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-muted transition-all flex items-center gap-2">
-          View Details
+      <div className="flex items-center gap-2">
+        <button 
+          onClick={() => onShortlistToggle?.(id)}
+          className={cn(
+            "p-2.5 rounded-xl transition-all border",
+            isShortlisted 
+              ? "bg-accent text-white border-accent shadow-md shadow-accent/20" 
+              : "bg-secondary text-muted-foreground border-transparent hover:border-accent/40 hover:text-accent"
+          )}
+          title={isShortlisted ? "Remove from shortlist" : "Add to shortlist"}
+        >
+          <Star className={cn("w-4 h-4", isShortlisted && "fill-current")} />
+        </button>
+        
+        <button 
+          onClick={() => onViewDetails?.(id)}
+          className="bg-secondary text-primary px-4 py-2.5 rounded-xl font-bold text-xs hover:bg-primary hover:text-white transition-all flex items-center gap-2 shadow-sm whitespace-nowrap"
+        >
+          View details
           <ChevronRight className="w-4 h-4" />
+        </button>
+
+        <button 
+          onClick={() => onDelete?.(id)}
+          className="p-2.5 text-muted-foreground hover:bg-red-50 hover:text-red-500 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+          title="Delete applicant"
+        >
+          <Trash2 className="w-4 h-4" />
         </button>
       </div>
     </div>

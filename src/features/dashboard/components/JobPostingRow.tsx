@@ -1,5 +1,9 @@
-import { MoreVertical, Code2, Palette, Microscope } from "lucide-react";
+import { MoreVertical, Code2, Palette, Microscope, StopCircle, Hourglass, Trash2, Edit3 } from "lucide-react";
 import Link from "next/link";
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ConfirmationModal } from "@/components/common/ConfirmationModal";
+import { cn } from "@/utils/cn";
 
 interface JobPostingRowProps {
   title: string;
@@ -28,7 +32,23 @@ export function JobPostingRow({
   matched, 
   icon 
 }: JobPostingRowProps) {
+  const [showMenu, setShowMenu] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showExpireModal, setShowExpireModal] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const Icon = icons[icon];
+  const slug = title.toLowerCase().replace(/ /g, "-");
   const actionHref = progress === 100 ? "/shortlists" : `/screening?role=${encodeURIComponent(title)}`;
   const actionLabel = progress === 100 ? "Review shortlist" : "Start screening";
   const actionClassName = progress === 100 ? "btn-primary" : "btn-accent";
@@ -36,7 +56,7 @@ export function JobPostingRow({
   return (
     <div className="soft-panel group flex flex-col gap-4 p-4 transition-all hover:border-primary/20 md:gap-6 md:p-6 xl:flex-row xl:items-center">
       <div className="flex items-center gap-4 md:gap-6">
-        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-secondary text-primary transition-all group-hover:bg-primary group-hover:text-white">
+        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-none bg-secondary text-primary transition-all group-hover:bg-primary group-hover:text-white">
           <Icon className="w-6 h-6" />
         </div>
 
@@ -78,10 +98,77 @@ export function JobPostingRow({
         <Link href={actionHref} className={`flex-1 xl:flex-none ${actionClassName} btn-sm`}>
           {actionLabel}
         </Link>
-        <button className="p-2 text-muted-foreground hover:bg-secondary rounded-full">
-          <MoreVertical className="w-5 h-5" />
-        </button>
+        <div className="relative" ref={menuRef}>
+          <button 
+            onClick={() => setShowMenu(!showMenu)}
+            className={cn(
+              "p-2 text-muted-foreground hover:bg-secondary rounded-full transition-colors",
+              showMenu && "bg-secondary text-primary"
+            )}
+          >
+            <MoreVertical className="w-5 h-5" />
+          </button>
+
+          <AnimatePresence>
+            {showMenu && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="absolute right-0 bottom-full mb-3 xl:bottom-auto xl:top-full xl:mt-3 w-56 bg-white border border-border/50 rounded-none shadow-xl shadow-black/5 z-50 overflow-hidden p-1.5"
+              >
+                <button className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-primary hover:bg-secondary rounded-xl transition-all">
+                  <StopCircle className="w-4 h-4 text-orange-500" />
+                  Stop Screening
+                </button>
+                <button 
+                  onClick={() => { setShowMenu(false); setShowExpireModal(true); }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-primary hover:bg-secondary rounded-none transition-all"
+                >
+                  <Hourglass className="w-4 h-4 text-blue-500" />
+                  Expire Job
+                </button>
+                <Link 
+                  href={`/jobs/edit/${slug}`}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-primary hover:bg-secondary rounded-none transition-all"
+                >
+                  <Edit3 className="w-4 h-4 text-accent" />
+                  Update Job
+                </Link>
+                <div className="my-1 border-t border-border/30" />
+                <button 
+                  onClick={() => { setShowMenu(false); setShowDeleteModal(true); }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Job
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={() => console.log("Deleting job:", title)}
+        title="Delete this job?"
+        description={`This action will permanently remove the "${title}" job brief and all related candidate screening data. This cannot be undone.`}
+        confirmLabel="Yes, Delete Job"
+        variant="danger"
+      />
+
+      <ConfirmationModal
+        isOpen={showExpireModal}
+        onClose={() => setShowExpireModal(false)}
+        onConfirm={() => console.log("Expiring job:", title)}
+        title="Expire this job?"
+        description={`Marking "${title}" as expired will stop all active screening and notify pending applicants that the role is no longer active.`}
+        confirmLabel="Expire Role"
+        variant="warning"
+      />
     </div>
   );
 }
+

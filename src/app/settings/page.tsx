@@ -1,41 +1,356 @@
+"use client";
+
+import { useState } from "react";
+import { 
+  ShieldCheck, 
+  Settings as SettingsIcon, 
+  Lock, 
+  ChevronRight,
+  Check,
+  X,
+  Mail,
+  KeyRound,
+  Shield,
+  Loader2
+} from "lucide-react";
+import { ConfirmationModal } from "@/components/common/ConfirmationModal";
+import { cn } from "@/utils/cn";
+
+interface SettingsItem {
+  id: string;
+  label: string;
+  value: string;
+  type: "text" | "select" | "status" | "badge" | "toggle";
+  sensitive?: boolean;
+}
+
+interface SettingsSection {
+  id: string;
+  label: string;
+  icon: any;
+  description: string;
+  items: SettingsItem[];
+}
+
+const initialSections: SettingsSection[] = [
+  {
+    id: "general",
+    label: "General Settings",
+    icon: SettingsIcon,
+    description: "Manage your workspace identity and basic preferences.",
+    items: [
+      { id: "workspace-name", label: "Workspace Name", value: "Umurava Africa", type: "text" },
+      { id: "timezone", label: "Timezone", value: "CAT (GMT+2)", type: "select" },
+    ]
+  },
+  {
+    id: "security",
+    label: "Security & Access",
+    icon: Lock,
+    description: "Control who can access this workspace and their permissions.",
+    items: [
+      { id: "email", label: "Email Address", value: "recruiter@umurava.africa", type: "text", sensitive: true },
+      { id: "password", label: "Account Password", value: "••••••••••••", type: "text", sensitive: true },
+      { id: "audit-log", label: "Audit Log Access", value: "Admins Only", type: "select" },
+    ]
+  }
+];
+
+type VerificationStep = "idle" | "requesting" | "verifying" | "editing";
+
 export default function SettingsPage() {
+  const [sections, setSections] = useState(initialSections);
+  const [activeSection, setActiveSection] = useState("general");
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [tempValue, setTempValue] = useState("");
+  const [showSaveModal, setShowSaveModal] = useState(false);
+
+  // Verification Flow State
+  const [vStep, setVStep] = useState<VerificationStep>("idle");
+  const [vCode, setVCode] = useState("");
+  const [isRequestingCode, setIsRequestingCode] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+
+  const handleEdit = (id: string, currentValue: string, isSensitive?: boolean) => {
+    setEditingItemId(id);
+    setTempValue(currentValue);
+    if (isSensitive) {
+      setVStep("idle");
+    } else {
+      setVStep("editing");
+    }
+  };
+
+  const handleRequestCode = async () => {
+    setIsRequestingCode(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 800));
+    setIsRequestingCode(false);
+    setVStep("verifying");
+  };
+
+  const handleVerifyCode = async () => {
+    setIsRequestingCode(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 800));
+    setIsRequestingCode(false);
+    if (vCode === "123456") { // Mock success
+      setVStep("editing");
+    } else {
+      setShowErrorModal(true);
+    }
+  };
+
+  const handleDone = (sectionId: string, itemId: string) => {
+    setSections(prev => prev.map(section => {
+      if (section.id === sectionId) {
+        return {
+          ...section,
+          items: section.items.map(item => 
+            item.id === itemId ? { ...item, value: tempValue } : item
+          )
+        };
+      }
+      return section;
+    }));
+    setEditingItemId(null);
+    setVStep("idle");
+    setVCode("");
+  };
+
+  const currentSection = sections.find(s => s.id === activeSection);
+
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
-      <div>
-        <h2 className="text-3xl font-black text-primary">Settings</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Simple placeholders for the integrations and policies your team will wire up next.
-        </p>
+    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
+        <div>
+          <h2 className="text-3xl font-black text-primary tracking-tighter">Settings</h2>
+          <p className="mt-1 text-sm text-muted-foreground font-medium">Fine-tune your workspace policies and account security.</p>
+        </div>
+        <button 
+          onClick={() => setShowSaveModal(true)}
+          className="btn-primary h-12 px-8 gap-3 rounded-xl shadow-lg shadow-primary/10"
+        >
+           <ShieldCheck className="w-4 h-4" />
+           Save Changes
+        </button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="soft-panel p-6">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">LLM integration</p>
-          <h3 className="mt-3 text-lg font-bold text-primary">Gemini connection</h3>
-          <p className="mt-3 text-sm leading-7 text-muted-foreground">
-            Pending backend credentials. UI is ready to display model status, request health, and
-            structured screening responses.
-          </p>
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Navigation Sidebar */}
+        <div className="w-full lg:w-72 space-y-1.5 font-sans">
+          {sections.map((section) => (
+            <button
+              key={section.id}
+              onClick={() => {
+                setActiveSection(section.id);
+                setEditingItemId(null);
+                setVStep("idle");
+              }}
+              className={cn(
+                "w-full text-left p-4 rounded-xl transition-all duration-200 flex items-center gap-4 group",
+                activeSection === section.id 
+                  ? "bg-primary text-white shadow-md shadow-primary/10" 
+                  : "hover:bg-secondary text-primary"
+              )}
+            >
+              <div className={cn(
+                "p-2 rounded-lg transition-colors",
+                activeSection === section.id ? "bg-white/10" : "bg-secondary group-hover:bg-white shadow-sm"
+              )}>
+                <section.icon className="w-4 h-4" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-xs uppercase tracking-widest">{section.label}</p>
+              </div>
+              <ChevronRight className={cn(
+                "w-3.5 h-3.5 transition-transform",
+                activeSection === section.id ? "translate-x-0" : "-translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100"
+              )} />
+            </button>
+          ))}
         </div>
 
-        <div className="soft-panel p-6">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Scoring policy</p>
-          <h3 className="mt-3 text-lg font-bold text-primary">Weighted evaluation</h3>
-          <p className="mt-3 text-sm leading-7 text-muted-foreground">
-            Skills, experience, education, and role relevance stay visible so recruiters can
-            challenge the ranking if needed.
-          </p>
-        </div>
+        {/* Content Area */}
+        <div className="flex-1 bg-white border border-border/50 rounded-2xl p-8 shadow-sm relative overflow-hidden min-h-[400px]">
+          <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+             <SettingsIcon className="w-48 h-48 rotate-12" />
+          </div>
 
-        <div className="soft-panel p-6">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Explainability</p>
-          <h3 className="mt-3 text-lg font-bold text-primary">Human review guardrails</h3>
-          <p className="mt-3 text-sm leading-7 text-muted-foreground">
-            Every shortlist output should show strengths, gaps, and a recommendation note without
-            pretending to make the final hiring decision.
-          </p>
+          <div className="relative space-y-10">
+             {currentSection?.items.map((item) => {
+               const isEditingThis = editingItemId === item.id;
+               
+               // Sensitive items get a separate visual block
+               if (item.sensitive) {
+                 return (
+                   <div key={item.id} className="bg-secondary/40 border border-border/60 rounded-xl p-6 transition-all hover:border-primary/20">
+                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="flex-1">
+                           <div className="flex items-center gap-2 mb-2">
+                              {item.id === "email" ? <Mail className="w-3 h-3 text-primary/50" /> : <KeyRound className="w-3 h-3 text-primary/50" />}
+                              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{item.label}</p>
+                           </div>
+                           
+                           {isEditingThis && vStep !== "editing" ? (
+                             <div className="space-y-4 max-w-sm animate-in fade-in slide-in-from-left-2 transition-all">
+                                {vStep === "idle" && (
+                                  <div className="space-y-3">
+                                    <p className="text-xs font-medium text-primary/70">
+                                      For your security, we need to verify your access before changing sensitive credentials.
+                                    </p>
+                                    <button 
+                                      onClick={handleRequestCode}
+                                      disabled={isRequestingCode}
+                                      className="btn-primary btn-sm h-10 w-full rounded-lg gap-2 text-[10px]"
+                                    >
+                                      {isRequestingCode ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
+                                      Request Verification Code
+                                    </button>
+                                  </div>
+                                )}
+                                {vStep === "verifying" && (
+                                  <div className="space-y-3">
+                                    <p className="text-xs font-medium text-primary/70">
+                                      Enter the 6-digit code sent to your email.
+                                    </p>
+                                    <div className="flex gap-2">
+                                      <input 
+                                        type="text"
+                                        placeholder="000 000"
+                                        value={vCode}
+                                        onChange={(e) => setVCode(e.target.value)}
+                                        className="flex-1 bg-white border border-border rounded-lg px-4 py-2 text-sm font-black tracking-[0.2em] outline-none"
+                                      />
+                                      <button 
+                                        onClick={handleVerifyCode}
+                                        disabled={isRequestingCode || vCode.length < 6}
+                                        className="btn-primary rounded-lg px-4 text-[10px] font-bold"
+                                      >
+                                        {isRequestingCode ? <Loader2 className="w-3 h-3 animate-spin" /> : "Verify"}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                             </div>
+                           ) : isEditingThis && vStep === "editing" ? (
+                             <div className="flex items-center gap-2 mt-2 max-w-sm">
+                                <input 
+                                  autoFocus
+                                  type={item.id === "password" ? "password" : "text"}
+                                  value={tempValue}
+                                  onChange={(e) => setTempValue(e.target.value)}
+                                  onKeyDown={(e) => e.key === "Enter" && handleDone(activeSection, item.id)}
+                                  className="flex-1 bg-white border border-border rounded-lg px-4 py-2.5 text-primary font-bold text-sm outline-none focus:ring-2 focus:ring-primary/10"
+                                />
+                                <button 
+                                  onClick={() => handleDone(activeSection, item.id)}
+                                  className="p-2.5 bg-primary text-white rounded-lg hover:bg-primary/90"
+                                >
+                                  <Check className="w-4 h-4" />
+                                </button>
+                             </div>
+                           ) : (
+                             <p className="text-primary font-bold text-base">{item.value}</p>
+                           )}
+                        </div>
+
+                        {!isEditingThis && (
+                          <button 
+                            onClick={() => handleEdit(item.id, item.value, true)}
+                            className="btn-base h-10 px-6 bg-white border border-border rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-secondary transition-all"
+                          >
+                            Edit Credentials
+                          </button>
+                        )}
+                        {isEditingThis && (
+                           <button 
+                            onClick={() => {
+                              setEditingItemId(null);
+                              setVStep("idle");
+                            }}
+                            className="p-2 text-muted-foreground hover:text-red-500 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                     </div>
+                   </div>
+                 );
+               }
+
+               return (
+                 <div key={item.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 group px-2">
+                   <div className="flex-1 max-w-md">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1 group-hover:text-accent transition-colors">
+                        {item.label}
+                      </p>
+                      {isEditingThis ? (
+                        <div className="flex items-center gap-2 mt-1">
+                          <input 
+                            autoFocus
+                            type="text"
+                            value={tempValue}
+                            onChange={(e) => setTempValue(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleDone(activeSection, item.id)}
+                            className="flex-1 bg-secondary border border-border rounded-lg px-4 py-2 text-primary font-bold text-sm outline-none focus:ring-2 focus:ring-primary/10"
+                          />
+                          <button 
+                            onClick={() => handleDone(activeSection, item.id)}
+                            className="p-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => setEditingItemId(null)}
+                            className="p-2 text-primary/30 rounded-lg hover:text-primary"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-primary font-bold text-base">{item.value}</p>
+                      )}
+                   </div>
+                   
+                   <div className="flex items-center gap-4">
+                      {!isEditingThis && (
+                        <button 
+                          onClick={() => handleEdit(item.id, item.value)}
+                          className="px-4 py-2 bg-secondary/50 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all whitespace-nowrap"
+                        >
+                          {item.type === "select" ? "Change" : "Edit"}
+                        </button>
+                      )}
+                   </div>
+                 </div>
+               );
+             })}
+          </div>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onConfirm={() => {
+          setShowSaveModal(false);
+        }}
+        title="Apply changes to workspace?"
+        description="Your new configuration will be applied across the entire workspace immediately. This may affect recruiter collaboration and screening protocols."
+        confirmLabel="Yes, Proceed"
+        variant="primary"
+      />
+
+      <ConfirmationModal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        onConfirm={() => setShowErrorModal(false)}
+        title="Invalid Verification Code"
+        description="The code you entered is incorrect or has expired. Please double-check your email and try again (Trial Code: 123456)."
+        confirmLabel="Try Again"
+        variant="danger"
+      />
     </div>
   );
 }

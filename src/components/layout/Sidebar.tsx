@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
   LayoutDashboard, 
@@ -12,9 +11,11 @@ import {
   PlusCircle,
   ChevronRight,
   ChevronLeft,
+  User2,
   X
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { PremiumLink } from "@/components/common/PremiumLink";
 
 const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -23,6 +24,7 @@ const navItems = [
   { label: "Screening", href: "/screening", icon: Sparkles },
   { label: "Shortlists", href: "/shortlists", icon: BarChart3 },
   { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Profile", href: "/profile", icon: User2 },
 ];
 
 interface SidebarProps {
@@ -56,17 +58,16 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
           "p-8 relative flex items-center border-b border-border/50",
           isCollapsed ? "justify-center" : "justify-between"
         )}>
-          <Link href="/" className="flex items-center gap-4 group">
+          <PremiumLink href="/" className="flex items-center gap-4 group">
             <div className="w-11 h-11 bg-primary rounded-2xl flex items-center justify-center shadow-sm shrink-0 transition-transform group-hover:scale-105">
               <span className="text-white font-black text-sm tracking-[0.2em]">US</span>
             </div>
             {!isCollapsed && (
               <div className="animate-in fade-in slide-in-from-left-2 duration-300">
-                <h1 className="font-black text-primary leading-none tracking-tight text-xl">Umurava Screen</h1>
-                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em] mt-1.5 opacity-60">AI Hiring Workspace</p>
+                <h1 className="font-black text-primary leading-none tracking-tight text-xl italic uppercase">Umurava</h1>
               </div>
             )}
-          </Link>
+          </PremiumLink>
           <button onClick={onClose} className="lg:hidden p-2 text-primary/40 hover:text-primary transition-colors">
             <X className="w-6 h-6" />
           </button>
@@ -75,15 +76,12 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
         {/* Navigation Area Dashboard */}
         <div className="flex-1 py-6 space-y-8 overflow-y-auto no-scrollbar relative px-4">
           <div>
-            {!isCollapsed && (
-              <p className="px-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4 opacity-40 animate-in fade-in duration-500">Recruiter Workspace</p>
-            )}
             <nav className="space-y-1.5">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
                 return (
-                  <Link
+                  <PremiumLink
                     key={item.href}
                     href={item.href}
                     onClick={onClose}
@@ -109,20 +107,12 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                     </div>
                     {isActive && !isCollapsed && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
                     {!isActive && !isCollapsed && <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-40 transition-opacity" />}
-                  </Link>
+                  </PremiumLink>
                 );
               })}
             </nav>
           </div>
 
-          {!isCollapsed && (
-            <div className="mx-2 rounded-3xl bg-primary p-5 text-white shadow-sm">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-white/50 font-bold mb-3">Hackathon Goal</p>
-              <p className="text-sm leading-relaxed text-white/85">
-                Help recruiters review applicants faster without hiding the final decision from humans.
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Footer Actions Dashboard */}
@@ -130,7 +120,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
           "p-6 mt-auto relative border-t border-border/50 bg-white/50 backdrop-blur-sm space-y-4",
           isCollapsed ? "flex flex-col items-center" : ""
         )}>
-          <Link 
+          <PremiumLink 
             href="/jobs/create"
             onClick={onClose}
             title={isCollapsed ? "Create New Job" : ""}
@@ -141,7 +131,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
           >
             <PlusCircle className={cn("transition-transform duration-300 group-hover:rotate-90", isCollapsed ? "w-6 h-6" : "w-5 h-5")} />
             {!isCollapsed && <span className="animate-in fade-in duration-300">Create New Job</span>}
-          </Link>
+          </PremiumLink>
 
           {/* Collapse Toggle Button Dashboard */}
           <button 

@@ -18,20 +18,20 @@ export function ShortlistStats() {
       </div>
 
       <div className="soft-panel relative flex h-48 flex-col justify-between overflow-hidden p-8">
-         <div>
-            <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Decision support</p>
-            <div className="flex items-end gap-3">
-               <h3 className="text-5xl font-black text-primary">04<span className="text-2xl font-bold opacity-40"> key</span></h3>
-               <span className="mb-2 rounded-full bg-primary px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">Signals</span>
-            </div>
-         </div>
-         <div className="flex items-center gap-3 pt-4 border-t border-border/50">
-            <Zap className="h-5 w-5 text-primary opacity-40" />
-            <p className="text-[10px] font-bold leading-tight text-muted-foreground">Skills, experience, relevance, and risk all stay visible during review.</p>
-         </div>
+        <div className="relative z-10 text-primary flex items-center gap-3">
+          <Zap className="h-5 w-5 text-accent" />
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Strategic Analysis</p>
+        </div>
+        <p className="relative z-10 text-xs font-medium leading-relaxed text-primary/70">
+          Scoring logic factors in technical depth, platform architecture, and cross-border delivery experience.
+        </p>
+        <div className="relative z-10 flex items-center justify-between border-t border-border/50 pt-4">
+           <span className="text-[10px] font-bold text-accent uppercase tracking-widest">Active Weights</span>
+           <span className="text-[10px] font-bold text-primary uppercase tracking-widest">v1.2.4</span>
+        </div>
       </div>
 
-      <div className="flex h-48 flex-col justify-between overflow-hidden rounded-3xl bg-primary p-8 text-white shadow-lg shadow-primary/20">
+      <div className="flex h-48 flex-col justify-between overflow-hidden rounded-none bg-primary p-8 text-white shadow-lg shadow-primary/20">
           <div>
             <div className="flex justify-between items-center mb-4">
               <p className="text-[10px] uppercase font-bold text-white/50 tracking-[0.2em]">Human review gate</p>

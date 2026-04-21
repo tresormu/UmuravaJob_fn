@@ -1,0 +1,124 @@
+"use client";
+
+import { JobPostingRow } from "@/features/dashboard/components/JobPostingRow";
+import { InsightCard } from "@/features/dashboard/components/InsightCard";
+import { Sparkles, Zap } from "lucide-react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { useState } from "react";
+import { JobSelectionModal } from "@/components/common/JobSelectionModal";
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const item = {
+  hidden: { y: 20, opacity: 0 },
+  show: { y: 0, opacity: 1 }
+};
+
+export function Dashboard() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const activeJobs = [
+    { id: "1", title: "Senior Frontend Engineer", department: "Engineering" },
+    { id: "2", title: "Product Designer", department: "Design" },
+    { id: "3", title: "Data Analyst", department: "Operations" },
+  ];
+
+  return (
+    <motion.div 
+      variants={container}
+      initial="hidden"
+      animate="show"
+      className="space-y-12 pb-20"
+    >
+      {/* Hero Section */}
+      <div className="grid gap-8 lg:grid-cols-1">
+        <motion.section variants={item} className="relative overflow-hidden group">
+          <div className="absolute inset-0 bg-primary rounded-3xl shadow-2xl shadow-primary/20 transition-all duration-500 group-hover:scale-[1.01]">
+             <div className="absolute top-0 right-0 p-20 opacity-10">
+               <Sparkles className="w-64 h-64 rotate-12 text-white" />
+             </div>
+          </div>
+          
+          <div className="relative p-8 md:p-16 space-y-8">
+            <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/10">
+               <div className="w-2 h-2 bg-accent rounded-full animate-pulse"></div>
+               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80">Talent Intelligence Hub</span>
+            </div>
+            
+            <div className="max-w-2xl space-y-6">
+              <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white leading-[1.1] text-balance">
+                High-precision screening, <span className="text-accent underline decoration-accent/30 underline-offset-8">human-led</span> decisions.
+              </h1>
+              <p className="text-lg leading-relaxed text-white/70 font-medium max-w-xl">
+                 Maximize your recruitment throughput with AI-assisted ranking that respects your judgment. We normalize mixed candidate data into actionable, explainable insights.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-4 sm:flex-row pt-4">
+              <Link href="/jobs/create" className="btn-accent btn-lg gap-3">
+                Publish new brief
+                <Zap className="h-4 w-4" />
+              </Link>
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="btn-base bg-white/10 hover:bg-white/20 text-white border border-white/20 px-8 py-4 rounded-2xl text-base font-bold transition-all"
+              >
+                Review pipelines
+              </button>
+            </div>
+          </div>
+        </motion.section>
+      </div>
+
+      <JobSelectionModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        jobs={activeJobs}
+      />
+
+
+      {/* Main Pipelines */}
+      <motion.div variants={item} className="space-y-6">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h3 className="text-2xl font-black text-primary tracking-tight">Active jobs you posted</h3>
+            <p className="text-sm text-muted-foreground font-medium">Real-time tracking of candidate progression across your active roles.</p>
+          </div>
+          <Link href="/jobs" className="text-xs font-black uppercase tracking-[0.2em] text-accent hover:underline decoration-accent/30 underline-offset-8">
+            Manage all roles
+          </Link>
+        </div>
+        <div className="grid gap-4">
+          <JobPostingRow
+            title="Senior Frontend Engineer"
+            department="Engineering"
+            type="Full-time"
+            location="Kigali / Remote"
+            progress={82}
+            applicants={62}
+            matched={12}
+            icon="code"
+          />
+          <JobPostingRow title="Product Designer" department="Design" type="Contract" location="Remote" progress={55} applicants={31} matched={8} icon="design" />
+          <JobPostingRow title="Data Analyst" department="Operations" type="Full-time" location="Hybrid" progress={40} applicants={93} matched={14} icon="research" />
+        </div>
+      </motion.div>
+
+      {/* Bottom Insights */}
+      <motion.div variants={item} className="grid grid-cols-1 gap-8 lg:grid-cols-1">
+        <div className="lg:col-span-1">
+          <InsightCard />
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}

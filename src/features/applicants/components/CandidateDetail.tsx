@@ -171,7 +171,6 @@ export function CandidateDetail({ candidate }: { candidate: CandidateProfile }) 
         <div className="flex gap-2 md:gap-4">
            <button className="hidden sm:block btn-secondary btn-md text-red-500 border-red-100 hover:bg-red-50">Reject</button>
            <button className="btn-secondary btn-md border-primary text-primary">Shortlist</button>
-           <button className="btn-primary btn-md">Placement</button>
         </div>
       </div>
 

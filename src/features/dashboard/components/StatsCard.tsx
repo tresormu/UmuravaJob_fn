@@ -33,7 +33,7 @@ export function StatsCard({ label, value, trend, icon, className }: StatsCardPro
           )}
         </div>
       </div>
-      <div className="relative z-10 rounded-2xl bg-secondary p-3 text-primary/55">
+      <div className="relative z-10 rounded-none bg-secondary p-3 text-primary/55">
         <Icon className="h-5 w-5" />
       </div>
     </div>

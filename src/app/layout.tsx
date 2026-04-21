@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
+import { LoadingScreen } from "@/components/common/LoadingScreen";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
-  title: "Umurava Screen",
+  title: "Umurava Screen | AI Hiring Workspace",
   description:
-    "Recruiter workspace for AI-assisted applicant screening, explainable shortlists, and human-led hiring decisions.",
+    "Premium recruiter workspace for AI-assisted applicant screening, explainable shortlists, and human-led hiring decisions.",
 };
+
+import { TransitionProvider } from "@/context/TransitionContext";
+import { AuthProvider } from "@/context/AuthContext";
 
 export default function RootLayout({
   children,
@@ -15,10 +20,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
-        <AppShell>
-          {children}
-        </AppShell>
+      <body className="overflow-hidden">
+        <AuthProvider>
+          <TransitionProvider>
+            <Suspense fallback={null}>
+              <LoadingScreen />
+            </Suspense>
+            <AppShell>
+              {children}
+            </AppShell>
+          </TransitionProvider>
+        </AuthProvider>
       </body>
     </html>
   );
