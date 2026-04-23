@@ -109,10 +109,10 @@ const normalizeScore = (applicant: BackendApplicant): number => {
 
   const normalizedScores = applicant.normalized
     ? [
-        applicant.normalized.skillScore,
-        applicant.normalized.experienceScore,
-        applicant.normalized.educationScore,
-      ].filter((value): value is number => typeof value === "number")
+      applicant.normalized.skillScore,
+      applicant.normalized.experienceScore,
+      applicant.normalized.educationScore,
+    ].filter((value): value is number => typeof value === "number")
     : [];
 
   if (normalizedScores.length > 0) {
@@ -228,4 +228,29 @@ export async function deleteApplicant(
     method: "DELETE",
     headers: withAuthHeaders(accessToken),
   });
+}
+
+export async function uploadApplicantPdfs(
+  accessToken: string,
+  jobId: string,
+  files: File[],
+): Promise<BackendApplicant[]> {
+  const formData = new FormData();
+  files.forEach((file) => formData.append("files", file));
+
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:2000/api"}/applicants/applicant-screening/pdf?jobId=${jobId}`, {
+    method: "POST",
+    headers: {
+      ...withAuthHeaders(accessToken),
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to upload PDFs");
+  }
+
+  const result = await response.json();
+  return result.results.map((r: any) => r.savedApplicant);
 }

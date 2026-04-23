@@ -17,6 +17,8 @@ type BackendJob = {
   location?: string;
   recruiterId?: string | { _id?: string; id?: string };
   deadline?: string;
+  applicantsCount?: number;
+  matchedCount?: number;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -118,9 +120,9 @@ const mapJob = (job: BackendJob): JobRecord => {
     recruiterId: normalizeRecruiterId(job.recruiterId),
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
-    progress: 0,
-    applicants: 0,
-    matched: 0,
+    progress: job.applicantsCount ? Math.min(100, Math.round(((job.matchedCount ?? 0) / job.applicantsCount) * 100)) : 0,
+    applicants: job.applicantsCount ?? 0,
+    matched: job.matchedCount ?? 0,
     icon: "code",
   };
 

@@ -25,6 +25,7 @@ import {
   deleteApplicant,
   fetchApplicants,
   updateApplicantStatus,
+  uploadApplicantPdfs,
   type ApplicantRecord,
 } from "@/services/applicantsService";
 import {
@@ -47,6 +48,8 @@ export default function ApplicantsPage() {
   const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
   const [isDeleteSingleModalOpen, setIsDeleteSingleModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadFeedback, setUploadFeedback] = useState<string | null>(null);
   const [applicantToDelete, setApplicantToDelete] = useState<string | null>(null);
 
   useEffect(() => {
@@ -208,6 +211,36 @@ export default function ApplicantsPage() {
           ? deleteError.message
           : "We couldn't clear this pipeline right now.",
       );
+    }
+  };
+
+  const handleFilesSelected = async (files: File[]) => {
+    if (!accessToken || !selectedJobId) {
+      setError("Please select a job brief first.");
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadFeedback(`Analyzing ${files.length} resume(s)...`);
+
+    try {
+      const newApplicants = await uploadApplicantPdfs(accessToken, selectedJobId, files);
+
+      // Refresh the entire list for consistency
+      const allApplicants = await fetchApplicants(accessToken);
+      setApplicants(allApplicants);
+
+      setUploadFeedback(`Successfully imported ${newApplicants.length} applicant(s).`);
+      setTimeout(() => {
+        setIsImportModalOpen(false);
+        setUploadFeedback(null);
+      }, 2000);
+    } catch (uploadError) {
+      setUploadFeedback(
+        uploadError instanceof Error ? uploadError.message : "Failed to process resumes."
+      );
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -496,17 +529,41 @@ export default function ApplicantsPage() {
 
       <BaseModal
         isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
+        onClose={() => {
+          if (!isUploading) {
+            setIsImportModalOpen(false);
+            setUploadFeedback(null);
+          }
+        }}
         title="Import Pipeline"
-        description="This recruiter-facing list is now live. File import is the next integration slice."
+        description="The screening flow is now live. Upload PDF resumes to automatically extract profiles and calculate matching scores using Gemini AI."
       >
         <div className="p-8 space-y-6">
-          <div className="rounded-[1.5rem] border border-accent/20 bg-accent/5 px-5 py-4 text-sm text-primary leading-relaxed">
-            PDF and spreadsheet intake are not wired yet because the current backend upload route still
-            saves placeholder recruiter/job IDs internally. I&apos;ll connect this next after we patch that
-            backend flow.
+          {uploadFeedback && (
+            <div className={cn(
+              "rounded-[1.5rem] border px-5 py-4 text-sm font-bold uppercase tracking-tight",
+              uploadFeedback.includes("Successfully")
+                ? "border-green-200 bg-green-50 text-green-700"
+                : "border-accent/20 bg-accent/5 text-primary"
+            )}>
+              {uploadFeedback}
+            </div>
+          )}
+
+          <div className={cn(isUploading && "pointer-events-none opacity-50")}>
+            <UploadCard
+              onFilesSelected={handleFilesSelected}
+            />
           </div>
-          <UploadCard className="opacity-60" />
+
+          {isUploading && (
+            <div className="flex items-center justify-center gap-3 py-4">
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-primary">Gemini is processing...</span>
+            </div>
+          )}
         </div>
       </BaseModal>
     </div>
