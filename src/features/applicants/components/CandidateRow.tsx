@@ -8,7 +8,7 @@ interface CandidateRowProps {
   role: string;
   score: number;
   tags: string[];
-  status: "Elite" | "High" | "Good";
+  status: string;
   isShortlisted?: boolean;
   onShortlistToggle?: (id: string) => void;
   onDelete?: (id: string) => void;
