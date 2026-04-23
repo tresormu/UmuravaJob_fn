@@ -1,18 +1,14 @@
-import { screeningCandidates } from "@/features/applicants/data/candidates";
 import { ScreeningWorkspace } from "@/features/screening/components/ScreeningWorkspace";
 
 interface ScreeningPageProps {
-  searchParams?: {
-    role?: string | string[];
-  };
+  searchParams?: { role?: string | string[] };
 }
 
 export default function ScreeningPage({ searchParams }: ScreeningPageProps) {
   const role = Array.isArray(searchParams?.role) ? searchParams?.role[0] : searchParams?.role;
-
   return (
     <div className="mx-auto max-w-[1480px]">
-      <ScreeningWorkspace applicants={screeningCandidates} role={role} />
+      <ScreeningWorkspace role={role} />
     </div>
   );
 }

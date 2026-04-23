@@ -1,31 +1,32 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Bot,
   BrainCircuit,
-  CheckCircle2,
   ChevronRight,
-  FileBadge2,
-  FileText,
-  IdCard,
-  MapPin,
-  MessageSquareText,
   RefreshCcw,
+  Search,
   ShieldCheck,
   Sparkles,
+  ThumbsDown,
+  ThumbsUp,
   X,
-  UserCheck,
   Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CandidateProfile } from "@/features/applicants/data/candidates";
 import { cn } from "@/utils/cn";
 import { screeningService } from "@/services/screeningService";
+import { useAuth } from "@/context/AuthContext";
+import { useJobs } from "@/context/JobContext";
+import { type JobRecord } from "@/services/jobsService";
+import { fetchApplicants, updateApplicantStatus } from "@/services/applicantsService";
+import { Loader2, Ban } from "lucide-react";
+import { Toast } from "@/components/common/Toast";
+import { ConfirmationModal } from "@/components/common/ConfirmationModal";
 
 interface ScreeningWorkspaceProps {
-  applicants: CandidateProfile[];
   role?: string;
 }
 
@@ -34,22 +35,116 @@ interface TranscriptMessage {
   content: string;
 }
 
-export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps) {
-  const selectedRole = role ?? "Senior Frontend Engineer";
-  const initialPrompt = `Start screening for the ${selectedRole} role. Review every resume, verify each ID and passport photo, rank the strongest matches, explain strengths and gaps, and surface who should move to shortlist.`;
+interface DisplayApplicant {
+  name: string;
+  role: string;
+  slug: string;
+  matchScore: number;
+  screeningStatus: "Ready" | "In Review" | "Needs follow-up";
+  rank: string;
+  analysis: string;
+  tags: string[];
+  passportPhoto: { initials: string; frameClassName: string; glowClassName: string };
+}
+
+export function ScreeningWorkspace({ role }: ScreeningWorkspaceProps) {
+  const { accessToken, user } = useAuth();
+  const { jobs } = useJobs();
+  const promptCustomised = useRef(false);
+
+  const [selectedJobId, setSelectedJobId] = useState<string>("");
+  const [selectedJob, setSelectedJob] = useState<JobRecord | null>(null);
+
+  const buildDefaultPrompt = (title: string) =>
+    `Start screening for the ${title} role. Review every resume, rank the strongest matches, explain strengths and gaps, and surface who should move to shortlist.`;
 
   const [isScreened, setIsScreened] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
-  const [prompt, setPrompt] = useState(initialPrompt);
+  const [prompt, setPrompt] = useState(
+    role ? buildDefaultPrompt(role) : "Select a job above to generate a screening prompt."
+  );
   const [lastRunLabel, setLastRunLabel] = useState<string | null>(null);
-  const [displayApplicants, setDisplayApplicants] = useState<CandidateProfile[]>(applicants);
-  const [messages, setMessages] = useState<TranscriptMessage[]>([
-    {
-      role: "assistant",
-      content: `Gemini-ready screening workspace is live. ${applicants.length} applicants are loaded with resume IDs, identity records, and passport photos.`,
-    },
-  ]);
+  const [displayApplicants, setDisplayApplicants] = useState<DisplayApplicant[]>([]);
+  const [isFetchingApplicants, setIsFetchingApplicants] = useState(false);
+  const [isSidebarLoading, setIsSidebarLoading] = useState(false);
+  const [messages, setMessages] = useState<TranscriptMessage[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [confirmingStatus, setConfirmingStatus] = useState<{ id: string; name: string; status: "shortlisted" | "rejected" } | null>(null);
+
+  // Fetch Applicants + reset screening state when selectedJobId changes
+  useEffect(() => {
+    async function loadApplicants() {
+      if (!selectedJobId || !accessToken) return;
+
+      const job = jobs.find(j => j.id === selectedJobId) ?? null;
+      setSelectedJob(job);
+
+      // Reset screening state for the new job
+      setIsScreened(false);
+      setIsAssistantOpen(false);
+      setDisplayApplicants([]);
+
+      // Update prompt only if the recruiter hasn't customised it
+      if (!promptCustomised.current) {
+        setPrompt(buildDefaultPrompt(job?.title ?? selectedJobId));
+      }
+
+      // Restore persisted state for this specific job
+      const saved = localStorage.getItem(`umurava_screening_${selectedJobId}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setPrompt(parsed.prompt);
+          setMessages(parsed.messages);
+          setIsScreened(parsed.isScreened);
+          promptCustomised.current = true;
+        } catch {
+          // ignore corrupt state
+        }
+      } else {
+        setMessages([]);
+        promptCustomised.current = false;
+      }
+
+      setIsFetchingApplicants(true);
+      try {
+        const realApplicants = await fetchApplicants(accessToken, selectedJobId);
+        const mapped: DisplayApplicant[] = realApplicants.map((app, index) => ({
+          name: app.name,
+          role: app.role,
+          slug: app.id,
+          matchScore: app.score,
+          screeningStatus:
+            app.workflowStatus === "shortlisted" ? "Ready"
+            : app.workflowStatus === "screened" ? "In Review"
+            : app.workflowStatus === "rejected" ? "Needs follow-up"
+            : "Ready",
+          rank: (index + 1).toString().padStart(2, "0"),
+          analysis: app.aiSummary || "Awaiting AI analysis...",
+          tags: app.tags,
+          passportPhoto: {
+            initials: app.name.split(" ").map(n => n[0] ?? "").join("").slice(0, 2).toUpperCase(),
+            frameClassName: "from-blue-600 to-indigo-600",
+            glowClassName: "shadow-blue-500/20",
+          },
+        }));
+        setDisplayApplicants(mapped);
+        if (!saved) {
+          setMessages([{
+            role: "assistant",
+            content: `Screening workspace ready. ${mapped.length} applicant(s) loaded for the ${job?.title ?? "selected"} role.`,
+          }]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch applicants:", error);
+      } finally {
+        setIsFetchingApplicants(false);
+      }
+    }
+    loadApplicants();
+  }, [selectedJobId, accessToken, jobs]);
 
   const stats = useMemo(() => {
     const readyCount = displayApplicants.filter((candidate) => candidate.screeningStatus === "Ready").length;
@@ -72,93 +167,139 @@ export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps
   }, [displayApplicants]);
 
   const sortedApplicants = useMemo(() => {
-    return displayApplicants.slice().sort((left, right) => right.matchScore - left.matchScore);
-  }, [displayApplicants]);
+    return displayApplicants
+      .filter(app => 
+        app.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        app.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.analysis.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      .slice()
+      .sort((left, right) => right.matchScore - left.matchScore);
+  }, [displayApplicants, searchQuery]);
+
+  const selectedRole = selectedJob?.title ?? role ?? "the selected role";
 
   const promptSuggestions = [
     `Prioritize backend architecture and delivery ownership for ${selectedRole}.`,
-    "Verify the resume IDs against each passport record before ranking.",
     "Return shortlist and follow-up recommendations.",
+    "Highlight candidates with the strongest skills match and flag any gaps.",
   ];
 
   const handleStartScreening = async () => {
     const cleanedPrompt = prompt.trim();
+    if (!cleanedPrompt || !selectedJobId || displayApplicants.length === 0) return;
 
-    if (!cleanedPrompt) {
-      return;
-    }
+    // Detect if this is a ranking request or a general chat
+    const rankingKeywords = ["rank", "suggest", "top", "score", "evaluate", "screen", "shortlist"];
+    const isRankingRequest = rankingKeywords.some(kw => cleanedPrompt.toLowerCase().includes(kw));
 
-    setIsLoading(true);
+    if (isRankingRequest) {
+      setIsLoading(true);
+      try {
+        // Extract topN from prompt if present (e.g. "top 5" -> 5)
+        const topNMatch = cleanedPrompt.match(/top\s*(\d+)/i);
+        const topN = topNMatch ? parseInt(topNMatch[1], 10) : displayApplicants.length;
 
-    try {
-      // In a real production flow, jobId would come from route or specific job context
-      const TEST_JOB_ID = "65e8a6f8b92d4b2e8c8b4567"; 
-      const response = await screeningService.rankApplicants(TEST_JOB_ID, applicants.length);
+        const response = await screeningService.rankApplicants(selectedJobId, topN, accessToken ?? undefined, cleanedPrompt);
 
-      const now = new Intl.DateTimeFormat("en", {
-        hour: "numeric",
-        minute: "2-digit",
-      }).format(new Date());
+        const now = new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date());
 
-      // Update the real visual cards with AI-generated data
-      const updatedApplicants = applicants.map(original => {
-        const aiResult = response.ranked_candidates.find(c => c.applicant_id === original.slug || c.candidate_name === original.name);
-        if (aiResult) {
-          return {
-            ...original,
-            matchScore: aiResult.score,
-            analysis: aiResult.summary,
-            rank: aiResult.rank.toString().padStart(2, '0')
-          };
-        }
-        return original;
-      });
+        const updatedApplicants = displayApplicants.map(original => {
+          const aiResult = response.ranked_candidates.find(
+            c => c.applicant_id === original.slug || c.candidate_name === original.name
+          );
+          if (aiResult) {
+            return {
+              ...original,
+              matchScore: aiResult.score,
+              analysis: aiResult.summary,
+              rank: aiResult.rank.toString().padStart(2, "0"),
+            };
+          }
+          return original;
+        });
 
-      setDisplayApplicants(updatedApplicants);
+        setDisplayApplicants(updatedApplicants);
 
-      const assistantMessage = `${response.message} I have successfully ranked ${response.ranked_candidates.length} candidates using Gemini 1.5 Pro. The top matches based on your criteria are ${response.ranked_candidates.slice(0, 3).map(c => c.candidate_name).join(", ")}.`;
+        const top3 = response.ranked_candidates.slice(0, 3).map(c => c.candidate_name).join(", ");
+        const assistantMessage = `${response.message} Ranked ${response.ranked_candidates.length} candidate(s). Top matches: ${top3}.`;
 
-      setMessages((current) => [
-        ...current,
-        { role: "user", content: cleanedPrompt },
-        { role: "assistant", content: assistantMessage },
-      ]);
-      
-      setIsLoading(false);
-      setLastRunLabel(`Last started at ${now}`);
-      setIsScreened(true);
+        setMessages(current => [
+          ...current,
+          { role: "user", content: cleanedPrompt },
+          { role: "assistant", content: assistantMessage },
+        ]);
+
+        setLastRunLabel(`Last run at ${now}`);
+        setIsScreened(true);
+        setIsAssistantOpen(true);
+      } catch (error) {
+        console.error("Screening Failed:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // General Chat in Sidebar
+      setIsSidebarLoading(true);
       setIsAssistantOpen(true);
-    } catch (error) {
-      console.error("Screening Failed:", error);
-      // Fallback/Simulated results if API is unreachable
-      await new Promise((resolve) => setTimeout(resolve, 2000));
       
-      const now = new Intl.DateTimeFormat("en", {
-        hour: "numeric",
-        minute: "2-digit",
-      }).format(new Date());
+      const userMsg: TranscriptMessage = { role: "user", content: cleanedPrompt };
+      setMessages(prev => [...prev, userMsg]);
+      
+      // Clear the prompt input for next message
+      setPrompt("");
 
-      const assistantMessage = `Screening successfully completed for ${applicants.length} applicants using Gemini-1.5-Pro. I have scored role fit for ${selectedRole}, and recommend ${stats.topMatches.join(", ")} as the strongest current shortlist.`;
+      try {
+        const history = messages.map(m => ({
+          role: m.role === "assistant" ? "model" as const : "user" as const,
+          parts: [{ text: m.content }]
+        }));
 
-      setMessages((current) => [
-        ...current,
-        { role: "user", content: cleanedPrompt },
-        { role: "assistant", content: assistantMessage },
-      ]);
-
-      setIsLoading(false);
-      setLastRunLabel(`Last started at ${now}`);
-      setIsScreened(true);
-      setIsAssistantOpen(true);
+        const response = await screeningService.chatWithAI(accessToken!, selectedJobId, cleanedPrompt, history);
+        
+        const assistantMsg: TranscriptMessage = { role: "assistant", content: response.message };
+        setMessages(prev => [...prev, assistantMsg]);
+      } catch (error) {
+        console.error("AI Chat Error:", error);
+        setMessages(prev => [...prev, { role: "assistant", content: "I'm sorry, I'm having trouble responding right now." }]);
+      } finally {
+        setIsSidebarLoading(false);
+      }
     }
   };
 
+  const handleStatusUpdate = async (id: string, status: "shortlisted" | "rejected") => {
+    if (!accessToken) return;
+    try {
+      await updateApplicantStatus(accessToken, id, status);
+      setDisplayApplicants(prev => prev.map(app => 
+        app.slug === id 
+          ? { ...app, screeningStatus: status === "shortlisted" ? "Ready" : "Needs follow-up" } 
+          : app
+      ));
+      setToast({ message: `Applicant successfully ${status}.`, type: "success" });
+    } catch (error) {
+      console.error("Failed to update status:", error);
+    }
+  };
+
+  const handleStatusClick = (id: string, name: string, status: "shortlisted" | "rejected") => {
+    setConfirmingStatus({ id, name, status });
+  };
+
   const handleResetPrompt = () => {
-    setPrompt(initialPrompt);
+    const defaultPrompt = buildDefaultPrompt(selectedRole);
+    setPrompt(defaultPrompt);
+    promptCustomised.current = false;
     setIsScreened(false);
     setIsLoading(false);
     setIsAssistantOpen(false);
-    localStorage.removeItem("umurava_screening_state");
+    if (selectedJobId) localStorage.removeItem(`umurava_screening_${selectedJobId}`);
+  };
+
+  const handlePromptChange = (value: string) => {
+    setPrompt(value);
+    promptCustomised.current = true;
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -171,31 +312,16 @@ export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps
   // Persistence logic
   const [isHydrated, setIsHydrated] = useState(false);
 
-  // Load state
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("umurava_screening_state");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          setPrompt(parsed.prompt);
-          setMessages(parsed.messages);
-          setIsScreened(parsed.isScreened);
-        } catch (e) {
-          console.error("Failed to parse screening state", e);
-        }
-      }
-      setIsHydrated(true);
-    }
+    setIsHydrated(true);
   }, []);
 
-  // Save state
+  // Save state per job whenever it changes
   useEffect(() => {
-    if (typeof window !== "undefined" && isHydrated) {
-      const state = { prompt, messages, isScreened };
-      localStorage.setItem("umurava_screening_state", JSON.stringify(state));
-    }
-  }, [prompt, messages, isScreened, isHydrated]);
+    if (!isHydrated || !selectedJobId) return;
+    const state = { prompt, messages, isScreened };
+    localStorage.setItem(`umurava_screening_${selectedJobId}`, JSON.stringify(state));
+  }, [prompt, messages, isScreened, isHydrated, selectedJobId]);
 
   if (!isHydrated) return null;
 
@@ -209,7 +335,7 @@ export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps
           </p>
           <h2 className="mt-3 text-3xl font-black tracking-tight text-primary">
             {isScreened 
-              ? `AI has ranked ${applicants.length} applicants for ${selectedRole}`
+              ? `AI has ranked ${displayApplicants.length} applicants for ${selectedRole}`
               : "Review every applicant in one Gemini-ready screening room."}
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
@@ -223,7 +349,7 @@ export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Applicants
               </p>
-              <p className="mt-3 text-3xl font-black text-primary">{applicants.length}</p>
+              <p className="mt-3 text-3xl font-black text-primary">{displayApplicants.length}</p>
             </div>
             <div className="rounded-2xl border border-border bg-secondary p-4">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
@@ -305,10 +431,19 @@ export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps
                 </div>
 
                 <div className="mt-8 rounded-3xl border border-border bg-secondary p-5">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                    Selected role for screening
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-3">
+                    Selected job for screening
                   </p>
-                  <p className="mt-2 text-xl font-bold text-primary">{selectedRole}</p>
+                  <select
+                    value={selectedJobId}
+                    onChange={(e) => setSelectedJobId(e.target.value)}
+                    className="w-full bg-white border border-border rounded-2xl px-5 py-3 text-lg font-bold text-primary outline-none focus:ring-2 focus:ring-primary/10"
+                  >
+                    <option value="" disabled>Select a job...</option>
+                    {jobs.map(job => (
+                      <option key={job.id} value={job.id}>{job.title}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="mt-8">
@@ -317,7 +452,7 @@ export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps
                   </label>
                   <textarea
                     value={prompt}
-                    onChange={(event) => setPrompt(event.target.value)}
+                    onChange={(event) => handlePromptChange(event.target.value)}
                     onKeyDown={handleKeyDown}
                     rows={6}
                     className="w-full rounded-[32px] border border-border bg-white px-6 py-5 text-base leading-relaxed text-primary outline-none transition-all focus:ring-2 focus:ring-primary/20"
@@ -339,9 +474,14 @@ export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps
                 </div>
 
                 <div className="mt-10 flex flex-wrap gap-4 border-t border-border pt-8">
-                  <button type="button" onClick={handleStartScreening} className="btn-primary flex-1 sm:flex-none h-14 px-10 gap-3 text-lg">
+                  <button
+                    type="button"
+                    onClick={handleStartScreening}
+                    disabled={!selectedJobId || isFetchingApplicants || displayApplicants.length === 0}
+                    className="btn-primary flex-1 sm:flex-none h-14 px-10 gap-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     <Sparkles className="h-5 w-5" />
-                    Start screening
+                    {isFetchingApplicants ? "Loading applicants..." : displayApplicants.length === 0 && selectedJobId ? "No applicants for this job" : "Start screening"}
                   </button>
                   <button type="button" onClick={handleResetPrompt} className="btn-secondary flex-1 sm:flex-none h-14 px-10 gap-2">
                     <RefreshCcw className="h-4 w-4" />
@@ -379,7 +519,7 @@ export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps
         ) : (
           /* Stage 2: Results View */
           <div className="xl:col-span-12 space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-500">
-            <div className="flex items-center justify-between gap-4 px-2">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
                <h3 className="text-xl font-bold text-primary flex items-center gap-3">
                  <Sparkles className="h-5 w-5 text-accent" />
                  Applicant Ranking Suggestions
@@ -388,14 +528,25 @@ export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps
                   <span className="text-muted-foreground">Top matches:</span>
                   {stats.topMatches.slice(0, 2).join(", ")}
                </div>
+               
+               <div className="relative w-full sm:w-64">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                 <input 
+                   type="text"
+                   placeholder="Search candidates..."
+                   value={searchQuery}
+                   onChange={(e) => setSearchQuery(e.target.value)}
+                   className="w-full pl-9 pr-4 py-2 text-xs font-bold rounded-full border border-border bg-white outline-none focus:ring-2 focus:ring-primary/10 transition-all"
+                 />
+               </div>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {sortedApplicants.map((candidate) => (
-                <Link 
-                  key={candidate.slug} 
+                <Link
+                  key={candidate.slug}
                   href={`/applicants/${candidate.slug}`}
-                  className="soft-panel group overflow-hidden border-2 border-transparent transition-all hover:border-primary/20 hover:shadow-xl"
+                  className="soft-panel group overflow-hidden border-2 border-transparent transition-all hover:border-primary/20 hover:shadow-xl block"
                 >
                   <div className="bg-secondary/50 p-6 border-b border-border/60">
                     <div className="flex items-start justify-between">
@@ -435,7 +586,9 @@ export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Match Score</p>
-                        <p className="mt-1 text-2xl font-black text-primary">{candidate.matchScore}%</p>
+                        <p className="mt-1 text-2xl font-black text-primary">
+                          {candidate.matchScore > 0 ? `${candidate.matchScore}%` : <span className="text-xs uppercase opacity-40">Not Screened</span>}
+                        </p>
                       </div>
                       <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-primary/5 text-primary opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
                          <ChevronRight className="h-5 w-5" />
@@ -455,6 +608,23 @@ export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps
                           {tag}
                         </span>
                       ))}
+                    </div>
+
+                    <div className="pt-4 grid grid-cols-2 gap-2">
+                      <button 
+                        onClick={(e) => { e.preventDefault(); handleStatusClick(candidate.slug, candidate.name, "shortlisted"); }}
+                        className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary/90 transition-all active:scale-95"
+                      >
+                        <ThumbsUp className="h-3 w-3" />
+                        Shortlist
+                      </button>
+                      <button 
+                        onClick={(e) => { e.preventDefault(); handleStatusClick(candidate.slug, candidate.name, "rejected"); }}
+                        className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-secondary border border-border text-primary text-[10px] font-black uppercase tracking-widest hover:bg-border transition-all active:scale-95"
+                      >
+                        <ThumbsDown className="h-3 w-3" />
+                        Reject
+                      </button>
                     </div>
                   </div>
                 </Link>
@@ -537,6 +707,17 @@ export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps
                         </div>
                       </div>
                     ))}
+                    {isSidebarLoading && (
+                      <div className="flex flex-col items-start gap-2 animate-in fade-in slide-in-from-left-2">
+                        <div className="flex items-center gap-2 px-1">
+                          <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground">Gemini Analysis</p>
+                        </div>
+                        <div className="rounded-[24px] p-5 text-sm leading-relaxed border border-border bg-secondary text-primary/80 rounded-tl-none flex items-center gap-3">
+                           <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                           <span className="font-bold animate-pulse">Thinking...</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -570,7 +751,7 @@ export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps
         )}
       </AnimatePresence>
 
-      {/* AI Analyzing Overlay */}
+      {/* AI Analyzing Overlay - only for ranking requests */}
       <AnimatePresence>
         {isLoading && (
           <motion.div
@@ -657,6 +838,26 @@ export function ScreeningWorkspace({ applicants, role }: ScreeningWorkspaceProps
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmationModal
+        isOpen={!!confirmingStatus}
+        onClose={() => setConfirmingStatus(null)}
+        onConfirm={() => {
+          if (confirmingStatus) handleStatusUpdate(confirmingStatus.id, confirmingStatus.status);
+          setConfirmingStatus(null);
+        }}
+        title={`Confirm ${confirmingStatus?.status}`}
+        description={`Are you sure you want to ${confirmingStatus?.status} ${confirmingStatus?.name}?`}
+        confirmLabel={`Yes, ${confirmingStatus?.status}`}
+      />
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

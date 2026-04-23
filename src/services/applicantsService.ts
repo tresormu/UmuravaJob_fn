@@ -1,6 +1,8 @@
 "use client";
 
-import { apiRequest } from "@/services/api";
+import { apiRequest, API_BASE_URL } from "@/services/api";
+
+type ApplicantStatus = "applied" | "screened" | "shortlisted" | "rejected";
 
 type BackendApplicant = {
   _id?: string;
@@ -121,7 +123,7 @@ const normalizeScore = (applicant: BackendApplicant): number => {
     return Math.round(average);
   }
 
-  return applicant.status === "shortlisted" ? 85 : applicant.status === "screened" ? 72 : 60;
+  return 0;
 };
 
 const scoreLabelFromValue = (score: number): "Elite" | "High" | "Good" => {
@@ -287,7 +289,7 @@ export async function uploadApplicantPdfs(
   const formData = new FormData();
   files.forEach((file) => formData.append("files", file));
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:2000/api"}/applicants/applicant-screening/pdf?jobId=${jobId}`, {
+  const response = await fetch(`${API_BASE_URL}/applicants/applicant-screening/pdf?jobId=${jobId}`, {
     method: "POST",
     headers: {
       ...withAuthHeaders(accessToken),
@@ -304,4 +306,21 @@ export async function uploadApplicantPdfs(
   }
 
   return result.results.map((r: any) => r.savedApplicant);
+}
+
+export async function createApplicant(
+  accessToken: string,
+  data: Partial<BackendApplicant>
+): Promise<ApplicantRecord> {
+  const response = await apiRequest<ApplicantMutationResponse>("/applicants", {
+    method: "POST",
+    headers: withAuthHeaders(accessToken),
+    body: data,
+  });
+
+  if (!response.applicant) {
+    throw new Error("Applicant creation did not return the new record.");
+  }
+
+  return mapApplicant(response.applicant);
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { MatchIntensity } from "@/features/applicants/components/MatchIntensity";
 import { SkillMatrix } from "@/features/applicants/components/SkillMatrix";
 import {
@@ -12,7 +13,7 @@ import type { ApplicantRecord } from "@/services/applicantsService";
 interface CandidateDetailProps {
   applicant: ApplicantRecord;
   onClose: () => void;
-  onStatusChange?: (id: string, status: string) => void;
+  onStatusChange?: (id: string, status: "applied" | "screened" | "shortlisted" | "rejected") => void;
 }
 
 function parseAiSummaryIntoPoints(summary: string): { title: string; desc: string }[] {
@@ -44,6 +45,18 @@ export function CandidateDetail({ applicant, onClose, onStatusChange }: Candidat
   const experienceYears = applicant.experience?.length ?? 0;
   const summary = applicant.aiSummary ?? "";
   const insights = parseAiSummaryIntoPoints(summary);
+  const [confirmingStatus, setConfirmingStatus] = useState<"shortlisted" | "rejected" | null>(null);
+
+  const handleStatusClick = (status: "shortlisted" | "rejected") => {
+    setConfirmingStatus(status);
+  };
+
+  const handleConfirm = () => {
+    if (confirmingStatus && onStatusChange && applicant.id) {
+      onStatusChange(applicant.id, confirmingStatus);
+    }
+    setConfirmingStatus(null);
+  };
 
   const skillMatrixItems = skills.slice(0, 4).map((skill: string, i: number) => ({
     label: skill,
@@ -52,7 +65,44 @@ export function CandidateDetail({ applicant, onClose, onStatusChange }: Candidat
   }));
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto bg-gray-50/40">
+    <div className="flex flex-col h-full overflow-y-auto bg-gray-50/40 relative">
+      {/* Confirmation Overlay */}
+      {confirmingStatus && (
+        <div className="absolute inset-0 z-[100] bg-white/90 backdrop-blur-sm flex items-center justify-center p-8 text-center animate-in fade-in duration-200">
+          <div className="max-w-xs space-y-6">
+            <div className={cn(
+              "w-16 h-16 rounded-full mx-auto flex items-center justify-center",
+              confirmingStatus === "rejected" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
+            )}>
+              <Star className={cn("w-8 h-8", confirmingStatus === "shortlisted" && "fill-current")} />
+            </div>
+            <div>
+              <h4 className="text-lg font-black text-primary">Are you sure?</h4>
+              <p className="text-sm text-muted-foreground mt-2">
+                You are about to {confirmingStatus} <strong>{applicant.name}</strong>.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleConfirm}
+                className={cn(
+                  "w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest text-white shadow-lg transition-all active:scale-95",
+                  confirmingStatus === "rejected" ? "bg-red-600 shadow-red-200" : "bg-primary shadow-primary/20"
+                )}
+              >
+                Yes, {confirmingStatus}
+              </button>
+              <button
+                onClick={() => setConfirmingStatus(null)}
+                className="w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest text-primary bg-secondary border border-border hover:bg-white transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-border px-8 py-6 flex items-start justify-between gap-4 sticky top-0 z-10">
         <div className="flex items-center gap-5">
@@ -239,7 +289,7 @@ export function CandidateDetail({ applicant, onClose, onStatusChange }: Candidat
           <div className="flex gap-3">
             {applicant.workflowStatus !== "rejected" && (
               <button
-                onClick={() => onStatusChange(applicant.id!, "rejected")}
+                onClick={() => handleStatusClick("rejected")}
                 className="px-5 py-2.5 rounded-xl border border-red-200 text-red-600 text-[10px] font-black uppercase tracking-wider hover:bg-red-50 transition-all"
               >
                 Reject
@@ -247,7 +297,7 @@ export function CandidateDetail({ applicant, onClose, onStatusChange }: Candidat
             )}
             {applicant.workflowStatus !== "shortlisted" && (
               <button
-                onClick={() => onStatusChange(applicant.id!, "shortlisted")}
+                onClick={() => handleStatusClick("shortlisted")}
                 className="px-5 py-2.5 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
               >
                 Shortlist

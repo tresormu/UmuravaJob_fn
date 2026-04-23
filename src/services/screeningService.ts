@@ -17,9 +17,16 @@ export interface RankingResponse {
 }
 
 export const screeningService = {
-  async rankApplicants(jobId: string, topN: number = 10): Promise<RankingResponse> {
+  async rankApplicants(jobId: string, topN: number = 10, accessToken?: string, prompt?: string): Promise<RankingResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/applicants/applicant-screening/rank?jobId=${jobId}&topN=${topN}`);
+      const url = new URL(`${API_BASE_URL}/applicants/applicant-screening/rank`);
+      url.searchParams.append("jobId", jobId);
+      url.searchParams.append("topN", topN.toString());
+      if (prompt) url.searchParams.append("prompt", prompt);
+
+      const response = await fetch(url.toString(), {
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      });
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -31,5 +38,21 @@ export const screeningService = {
       console.error("Screening Service Error:", error);
       throw error;
     }
+  },
+  async chatWithAI(accessToken: string, jobId: string, message: string, history: any[] = []): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/recruiter/chat/${jobId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ message, history }),
+    });
+
+    if (!response.ok) {
+      throw new Error("AI Chat failed");
+    }
+
+    return response.json();
   }
 };

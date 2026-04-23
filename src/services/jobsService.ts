@@ -169,8 +169,9 @@ export const jobFormValuesFromJob = (job?: JobRecord | null): JobFormValues => {
   };
 };
 
-export async function fetchJobs(): Promise<JobRecord[]> {
-  const response = await apiRequest<JobsResponse>("/jobs");
+export async function fetchJobs(recruiterId?: string): Promise<JobRecord[]> {
+  const url = recruiterId ? `/jobs?recruiterId=${recruiterId}` : "/jobs";
+  const response = await apiRequest<JobsResponse>(url);
   return response.data.map(mapJob);
 }
 

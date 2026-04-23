@@ -24,6 +24,11 @@ export function AiChatDrawer({ isOpen, onClose, jobId, accessToken, jobTitle }: 
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const messagesRef = useRef<Message[]>([]);
+
+    useEffect(() => {
+        messagesRef.current = messages;
+    }, [messages]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -44,9 +49,7 @@ export function AiChatDrawer({ isOpen, onClose, jobId, accessToken, jobTitle }: 
         setIsLoading(true);
 
         try {
-            // We pass the history (excluding the new user message which is already in the state but the backend takes it separately)
-            // Actually the backend takes 'message' and 'history' separately.
-            const history = messages;
+            const history = messagesRef.current;
             const response = await chatWithAI(accessToken, jobId, input, history);
 
             const aiMessage: Message = {

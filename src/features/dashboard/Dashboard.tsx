@@ -5,15 +5,12 @@ import { InsightCard } from "@/features/dashboard/components/InsightCard";
 import { Sparkles, Zap } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { JobSelectionModal } from "@/components/common/JobSelectionModal";
 import { useAuth } from "@/context/AuthContext";
-import {
-  deleteJob,
-  fetchJobs,
-  filterJobsForRecruiter,
-  type JobRecord,
-} from "@/services/jobsService";
+import { useJobs } from "@/context/JobContext";
+import { deleteJob } from "@/services/jobsService";
+import { type JobRecord } from "@/services/jobsService";
 
 const container = {
   hidden: { opacity: 0 },
@@ -32,48 +29,11 @@ const item = {
 
 export function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [jobs, setJobs] = useState<JobRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { accessToken, user } = useAuth();
+  const { accessToken } = useAuth();
+  const { jobs, isLoading, refreshJobs } = useJobs();
 
-  useEffect(() => {
-    let isActive = true;
-
-    const loadJobs = async () => {
-      try {
-        setError(null);
-        const allJobs = await fetchJobs();
-        if (isActive) {
-          setJobs(filterJobsForRecruiter(allJobs, user?.id));
-        }
-      } catch (loadError) {
-        if (isActive) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "We couldn't load your active roles.",
-          );
-        }
-      } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void loadJobs();
-
-    return () => {
-      isActive = false;
-    };
-  }, [user?.id]);
-
-  const activeJobs = useMemo(
-    () => jobs.slice(0, 3),
-    [jobs],
-  );
-
+  const activeJobs = useMemo(() => jobs.slice(0, 3), [jobs]);
   const modalJobs = useMemo(
     () => jobs.map((job) => ({ id: job.id, title: job.title, department: job.department })),
     [jobs],
@@ -84,10 +44,9 @@ export function Dashboard() {
       setError("Your session expired. Sign in again to manage jobs.");
       return;
     }
-
     try {
       await deleteJob(accessToken, jobId);
-      setJobs((current) => current.filter((job) => job.id !== jobId));
+      await refreshJobs();
     } catch (deleteError) {
       setError(
         deleteError instanceof Error
@@ -170,11 +129,10 @@ export function Dashboard() {
         )}
 
         {isLoading ? (
-          <div className="soft-panel p-10 text-center">
-            <h4 className="text-xl font-black text-primary">Loading active roles</h4>
-            <p className="mt-2 text-sm font-medium text-muted-foreground">
-              Pulling your live jobs from the backend.
-            </p>
+          <div className="space-y-4 animate-pulse">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-20 bg-secondary rounded-2xl" />
+            ))}
           </div>
         ) : activeJobs.length > 0 ? (
           <div className="grid gap-4">

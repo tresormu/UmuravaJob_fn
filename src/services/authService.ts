@@ -165,3 +165,22 @@ export async function refreshRecruiterSession(
     refreshToken: response.refreshToken,
   };
 }
+
+export async function updateRecruiter(
+  accessToken: string,
+  id: string,
+  data: Partial<RecruiterUser>
+): Promise<RecruiterUser> {
+  const response = await apiRequest<{ success: boolean; message: string; recruiter: BackendRecruiter }>(
+    `/recruiters/${id}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: data,
+    }
+  );
+
+  return mapRecruiter(response.recruiter);
+}

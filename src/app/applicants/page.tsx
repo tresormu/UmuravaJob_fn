@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { UploadCard } from "@/features/applicants/components/UploadCard";
 import { CandidateRow } from "@/features/applicants/components/CandidateRow";
@@ -18,7 +17,10 @@ import {
   SlidersHorizontal,
   FileSpreadsheet,
   BrainCircuit,
+  UserPlus,
+  Ban,
 } from "lucide-react";
+import { Toast } from "@/components/common/Toast";
 import { cn } from "@/utils/cn";
 import { motion, AnimatePresence } from "framer-motion";
 import { ConfirmationModal } from "@/components/common/ConfirmationModal";
@@ -26,6 +28,7 @@ import { BaseModal } from "@/components/common/BaseModal";
 import { useAuth } from "@/context/AuthContext";
 import {
   bulkUpdateApplicantsStatus,
+  createApplicant,
   deleteApplicant,
   fetchApplicants,
   updateApplicantStatus,
@@ -33,21 +36,15 @@ import {
   uploadApplicantSpreadsheet,
   type ApplicantRecord,
 } from "@/services/applicantsService";
-import {
-  fetchJobs,
-  filterJobsForRecruiter,
-  type JobRecord,
-} from "@/services/jobsService";
+import { useJobs } from "@/context/JobContext";
 
 export default function ApplicantsPage() {
-  const router = useRouter();
   const { accessToken, user } = useAuth();
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const { jobs, selectedJobId, setSelectedJobId, selectedJob, isLoading: isJobsLoading } = useJobs();
   const [searchQuery, setSearchQuery] = useState("");
-  const [jobs, setJobs] = useState<JobRecord[]>([]);
   const [applicants, setApplicants] = useState<ApplicantRecord[]>([]);
   const [sortBy, setSortBy] = useState<"score" | "name">("score");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
@@ -58,58 +55,42 @@ export default function ApplicantsPage() {
   const [applicantToDelete, setApplicantToDelete] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  const [isRejectAllRemainingOpen, setIsRejectAllRemainingOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [selectedApplicant, setSelectedApplicant] = useState<ApplicantRecord | null>(null);
+
+  const [manualFormData, setManualFormData] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    location: "",
+    resumeUrl: "",
+  });
 
   useEffect(() => {
     let isActive = true;
 
-    const loadData = async () => {
-      if (!accessToken) {
-        if (isActive) {
-          setError("Your session expired. Sign in again to load applicants.");
-          setIsLoading(false);
-        }
-        return;
-      }
-
+    const loadApplicants = async () => {
+      if (!accessToken) return;
+      setIsLoading(true);
       try {
-        setError(null);
-        const [allJobs, allApplicants] = await Promise.all([
-          fetchJobs(),
-          fetchApplicants(accessToken),
-        ]);
-
-        if (!isActive) return;
-
-        setJobs(filterJobsForRecruiter(allJobs, user?.id));
-        setApplicants(allApplicants);
-      } catch (loadError) {
-        if (isActive) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "We couldn't load the applicant pipeline.",
-          );
-        }
+        const allApplicants = await fetchApplicants(accessToken);
+        if (isActive) setApplicants(allApplicants);
+      } catch (err: any) {
+        if (isActive) setError(err.message || "Failed to load applicants");
       } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
+        if (isActive) setIsLoading(false);
       }
     };
-
-    void loadData();
+    loadApplicants();
 
     return () => {
       isActive = false;
     };
   }, [accessToken, user?.id]);
-
-  const selectedJob = useMemo(
-    () => jobs.find((job) => job.id === selectedJobId) ?? null,
-    [jobs, selectedJobId],
-  );
 
   const applicantCountsByJob = useMemo(() => {
     return applicants.reduce<Record<string, number>>((acc, applicant) => {
@@ -223,6 +204,43 @@ export default function ApplicantsPage() {
     }
   };
 
+  const confirmRejectAllRemaining = async () => {
+    if (!accessToken || !selectedJobId) return;
+
+    const pendingApplicants = currentApplicants.filter(
+      (app) => app.workflowStatus === "applied"
+    );
+
+    if (pendingApplicants.length === 0) {
+      setToast({ message: "No pending applicants to reject.", type: "error" });
+      return;
+    }
+
+    setIsBulkUpdating(true);
+    try {
+      await bulkUpdateApplicantsStatus(
+        accessToken,
+        pendingApplicants.map((a) => a.id),
+        "rejected"
+      );
+
+      setApplicants((prev) =>
+        prev.map((app) =>
+          app.jobId === selectedJobId && app.workflowStatus === "applied"
+            ? { ...app, workflowStatus: "rejected", isShortlisted: false }
+            : app
+        )
+      );
+
+      setToast({ message: `Successfully rejected ${pendingApplicants.length} applicant(s).`, type: "success" });
+    } catch (err: any) {
+      setError(err.message || "Failed to reject remaining applicants");
+    } finally {
+      setIsBulkUpdating(false);
+      setIsRejectAllRemainingOpen(false);
+    }
+  };
+
   const handleSelect = (id: string, selected: boolean) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -240,17 +258,16 @@ export default function ApplicantsPage() {
     }
   };
 
-  const handleBulkMove = async (status: any) => {
+  const handleBulkMove = async (status: ApplicantRecord["workflowStatus"]) => {
     if (selectedIds.size === 0 || !accessToken) return;
 
     setIsBulkUpdating(true);
     try {
       await bulkUpdateApplicantsStatus(accessToken, Array.from(selectedIds), status);
 
-      // Update local state
       setApplicants((prev) =>
         prev.map((app) =>
-          selectedIds.has(app.id) ? { ...app, status } : app
+          selectedIds.has(app.id) ? { ...app, workflowStatus: status, isShortlisted: status === "shortlisted" } : app
         )
       );
 
@@ -264,11 +281,13 @@ export default function ApplicantsPage() {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedIds.size === 0 || !accessToken) return;
+    setIsBulkDeleteOpen(true);
+  };
 
-    if (!confirm(`Are you sure you want to delete ${selectedIds.size} applicant(s)?`)) return;
-
+  const confirmBulkDelete = async () => {
+    if (!accessToken) return;
     setIsBulkUpdating(true);
     try {
       await Promise.all(
@@ -291,16 +310,17 @@ export default function ApplicantsPage() {
     if (found) setSelectedApplicant(found);
   };
 
-  const handleDetailStatusChange = async (id: string, status: string) => {
+  const handleDetailStatusChange = async (id: string, status: ApplicantRecord["workflowStatus"]) => {
     if (!accessToken) return;
     try {
       await updateApplicantStatus(accessToken, id, status);
       setApplicants((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, workflowStatus: status as ApplicantRecord["workflowStatus"] } : a))
+        prev.map((a) => (a.id === id ? { ...a, workflowStatus: status as ApplicantRecord["workflowStatus"], isShortlisted: status === "shortlisted" } : a))
       );
       setSelectedApplicant((prev) =>
-        prev?.id === id ? { ...prev, workflowStatus: status as ApplicantRecord["workflowStatus"] } : prev
+        prev?.id === id ? { ...prev, workflowStatus: status as ApplicantRecord["workflowStatus"], isShortlisted: status === "shortlisted" } : prev
       );
+      setToast({ message: `Applicant successfully ${status}.`, type: "success" });
     } catch (err: any) {
       setError(err.message || "Failed to update applicant status");
     }
@@ -363,6 +383,37 @@ export default function ApplicantsPage() {
     }
   };
 
+  const handleManualAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accessToken || !selectedJobId) return;
+
+    setIsUploading(true);
+    try {
+      const newApplicant = await createApplicant(accessToken, {
+        ...manualFormData,
+        jobId: selectedJobId as any,
+        source: "manual",
+        status: "applied",
+      });
+
+      setApplicants((prev) => [newApplicant, ...prev]);
+      setIsManualModalOpen(false);
+      setManualFormData({
+        fullName: "",
+        email: "",
+        phone: "",
+        location: "",
+        resumeUrl: "",
+      });
+      setUploadFeedback("Applicant added successfully!");
+      setTimeout(() => setUploadFeedback(null), 3000);
+    } catch (err: any) {
+      setError(err.message || "Failed to add applicant");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   if (!selectedJobId) {
     return (
       <div className="mx-auto max-w-6xl space-y-10 pb-20">
@@ -391,12 +442,11 @@ export default function ApplicantsPage() {
           />
         </div>
 
-        {isLoading ? (
-          <div className="soft-panel p-12 text-center">
-            <h3 className="text-2xl font-black text-primary">Loading roles</h3>
-            <p className="mt-2 text-sm font-medium text-muted-foreground">
-              Pulling your active jobs and applicant counts from the backend.
-            </p>
+        {isJobsLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-pulse">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-24 bg-secondary rounded-[2rem]" />
+            ))}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -466,14 +516,30 @@ export default function ApplicantsPage() {
 
         <div className="flex items-center gap-3">
           {currentApplicants.length > 0 && (
-            <button
-              onClick={() => setIsDeleteAllModalOpen(true)}
-              className="px-6 py-3 rounded-2xl bg-red-50 text-red-600 text-xs font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all flex items-center gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete All
-            </button>
+            <>
+              <button
+                onClick={() => setIsRejectAllRemainingOpen(true)}
+                className="px-6 py-3 rounded-2xl bg-amber-50 text-amber-600 text-xs font-black uppercase tracking-widest border border-amber-100 hover:bg-amber-100 transition-all flex items-center gap-2"
+              >
+                <Ban className="w-4 h-4" />
+                Reject All Remaining
+              </button>
+              <button
+                onClick={() => setIsDeleteAllModalOpen(true)}
+                className="px-6 py-3 rounded-2xl bg-red-50 text-red-600 text-xs font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete All
+              </button>
+            </>
           )}
+           <button
+            onClick={() => setIsManualModalOpen(true)}
+            className="px-6 py-3 rounded-2xl bg-secondary text-primary text-xs font-black uppercase tracking-widest border border-border/50 hover:bg-white transition-all flex items-center gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            Add Applicant
+          </button>
           <button
             onClick={() => setIsImportModalOpen(true)}
             className="px-6 py-3 rounded-2xl bg-secondary text-primary text-xs font-black uppercase tracking-widest border border-border/50 hover:bg-white transition-all flex items-center gap-2"
@@ -554,6 +620,13 @@ export default function ApplicantsPage() {
           </div>
 
           <div className="min-h-[400px] relative">
+            {isLoading ? (
+              <div className="space-y-4 animate-pulse">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="h-20 bg-secondary rounded-2xl" />
+                ))}
+              </div>
+            ) : (
             <AnimatePresence mode="popLayout">
               {currentApplicants.length > 0 ? (
                 currentApplicants.map((applicant, index) => (
@@ -615,6 +688,7 @@ export default function ApplicantsPage() {
                 </motion.div>
               )}
             </AnimatePresence>
+            )}
           </div>
         </div>
 
@@ -660,6 +734,15 @@ export default function ApplicantsPage() {
         title="Delete All Applicants"
         description="Are you sure you want to delete everyone in this pool? This action is permanent and will clear the intake pipeline for this role."
         confirmLabel="Clear Pipeline"
+      />
+
+      <ConfirmationModal
+        isOpen={isBulkDeleteOpen}
+        onClose={() => setIsBulkDeleteOpen(false)}
+        onConfirm={() => void confirmBulkDelete()}
+        title="Delete Selected Applicants"
+        description={`Are you sure you want to delete ${selectedIds.size} applicant(s)? This action cannot be undone.`}
+        confirmLabel="Delete"
       />
 
       <ConfirmationModal
@@ -714,6 +797,89 @@ export default function ApplicantsPage() {
           )}
         </div>
       </BaseModal>
+
+      <BaseModal
+        isOpen={isManualModalOpen}
+        onClose={() => setIsManualModalOpen(false)}
+        title="Manual Applicant Addition"
+        description="Add a candidate manually to the pipeline by providing their basic details and CV link."
+      >
+        <form onSubmit={handleManualAdd} className="p-8 space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Full Name *</label>
+              <input
+                required
+                type="text"
+                placeholder="Candidate Full Name"
+                value={manualFormData.fullName}
+                onChange={(e) => setManualFormData({ ...manualFormData, fullName: e.target.value })}
+                className="w-full bg-secondary/50 border border-border rounded-2xl py-4 px-6 text-primary outline-none focus:bg-white focus:border-accent transition-all font-bold"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Email</label>
+                <input
+                  type="email"
+                  placeholder="email@example.com"
+                  value={manualFormData.email}
+                  onChange={(e) => setManualFormData({ ...manualFormData, email: e.target.value })}
+                  className="w-full bg-secondary/50 border border-border rounded-2xl py-4 px-6 text-primary outline-none focus:bg-white focus:border-accent transition-all font-bold"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Phone</label>
+                <input
+                  type="text"
+                  placeholder="+250..."
+                  value={manualFormData.phone}
+                  onChange={(e) => setManualFormData({ ...manualFormData, phone: e.target.value })}
+                  className="w-full bg-secondary/50 border border-border rounded-2xl py-4 px-6 text-primary outline-none focus:bg-white focus:border-accent transition-all font-bold"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Location</label>
+              <input
+                type="text"
+                placeholder="City, Country"
+                value={manualFormData.location}
+                onChange={(e) => setManualFormData({ ...manualFormData, location: e.target.value })}
+                className="w-full bg-secondary/50 border border-border rounded-2xl py-4 px-6 text-primary outline-none focus:bg-white focus:border-accent transition-all font-bold"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">CV PDF Link (URL)</label>
+              <input
+                type="url"
+                placeholder="https://..."
+                value={manualFormData.resumeUrl}
+                onChange={(e) => setManualFormData({ ...manualFormData, resumeUrl: e.target.value })}
+                className="w-full bg-secondary/50 border border-border rounded-2xl py-4 px-6 text-primary outline-none focus:bg-white focus:border-accent transition-all font-bold"
+              />
+            </div>
+          </div>
+
+          <div className="pt-4 flex gap-3">
+            <button
+              type="submit"
+              disabled={isUploading}
+              className="flex-1 px-6 py-4 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-accent transition-all disabled:opacity-50"
+            >
+              {isUploading ? "Adding..." : "Add to Pipeline"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsManualModalOpen(false)}
+              className="px-6 py-4 bg-secondary text-primary rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-border transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </BaseModal>
+
       <AnimatePresence>
         {selectedIds.size > 0 && (
           <motion.div
@@ -733,7 +899,7 @@ export default function ApplicantsPage() {
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Move to stage:</span>
                 <div className="flex items-center gap-1.5 p-1 bg-white/5 rounded-xl border border-white/5">
-                  {["applied", "screened", "shortlisted", "rejected"].map((stage) => (
+                  {(["applied", "screened", "shortlisted", "rejected"] as const).map((stage) => (
                     <button
                       key={stage}
                       onClick={() => handleBulkMove(stage)}
@@ -797,6 +963,22 @@ export default function ApplicantsPage() {
           </>
         )}
       </AnimatePresence>
+      <ConfirmationModal
+        isOpen={isRejectAllRemainingOpen}
+        onClose={() => setIsRejectAllRemainingOpen(false)}
+        onConfirm={() => void confirmRejectAllRemaining()}
+        title="Reject Remaining Applicants"
+        description="This will move every applicant currently in the 'Applied' stage to 'Rejected'. Are you sure?"
+        confirmLabel="Reject All Remaining"
+      />
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

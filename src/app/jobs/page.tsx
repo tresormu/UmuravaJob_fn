@@ -1,54 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { JobPostingRow } from "@/features/dashboard/components/JobPostingRow";
 import { Plus, Search, Filter, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
-import {
-  deleteJob,
-  fetchJobs,
-  filterJobsForRecruiter,
-  type JobRecord,
-} from "@/services/jobsService";
+import { useJobs } from "@/context/JobContext";
+import { deleteJob } from "@/services/jobsService";
 
 export default function JobsPage() {
-  const { accessToken, user } = useAuth();
+  const { accessToken } = useAuth();
+  const { jobs, isLoading, error: jobsError, refreshJobs } = useJobs();
   const [searchQuery, setSearchQuery] = useState("");
-  const [jobs, setJobs] = useState<JobRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isActive = true;
-
-    const loadJobs = async () => {
-      try {
-        setError(null);
-        const allJobs = await fetchJobs();
-        if (isActive) {
-          setJobs(filterJobsForRecruiter(allJobs, user?.id));
-        }
-      } catch (loadError) {
-        if (isActive) {
-          setError(
-            loadError instanceof Error ? loadError.message : "We couldn't load your job board.",
-          );
-        }
-      } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void loadJobs();
-
-    return () => {
-      isActive = false;
-    };
-  }, [user?.id]);
+  const displayError = error ?? jobsError;
 
   const filteredJobs = useMemo(
     () =>
@@ -66,10 +33,9 @@ export default function JobsPage() {
       setError("Your session expired. Sign in again to delete a job.");
       return;
     }
-
     try {
       await deleteJob(accessToken, jobId);
-      setJobs((current) => current.filter((job) => job.id !== jobId));
+      await refreshJobs();
     } catch (deleteError) {
       setError(
         deleteError instanceof Error ? deleteError.message : "We couldn't delete this job.",
@@ -132,9 +98,9 @@ export default function JobsPage() {
         </Link>
       </div>
 
-      {error && (
+      {displayError && (
         <div className="rounded-[1.5rem] border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
-          {error}
+          {displayError}
         </div>
       )}
 
@@ -164,11 +130,10 @@ export default function JobsPage() {
       </div>
 
       {isLoading ? (
-        <div className="soft-panel p-12 text-center">
-          <h4 className="text-xl font-black text-primary">Loading your jobs</h4>
-          <p className="mt-2 text-sm text-muted-foreground font-medium">
-            Pulling the latest role briefs from the backend.
-          </p>
+        <div className="space-y-4 animate-pulse">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-20 bg-secondary rounded-2xl" />
+          ))}
         </div>
       ) : (
         <div className="space-y-6">

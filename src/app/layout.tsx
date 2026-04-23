@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 
 import { TransitionProvider } from "@/context/TransitionContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { JobProvider } from "@/context/JobContext";
 
 export default function RootLayout({
   children,
@@ -22,14 +23,16 @@ export default function RootLayout({
     <html lang="en">
       <body className="overflow-hidden">
         <AuthProvider>
-          <TransitionProvider>
-            <Suspense fallback={null}>
-              <LoadingScreen />
-            </Suspense>
-            <AppShell>
-              {children}
-            </AppShell>
-          </TransitionProvider>
+          <JobProvider>
+            <TransitionProvider>
+              <Suspense fallback={null}>
+                <LoadingScreen />
+              </Suspense>
+              <AppShell>
+                {children}
+              </AppShell>
+            </TransitionProvider>
+          </JobProvider>
         </AuthProvider>
       </body>
     </html>

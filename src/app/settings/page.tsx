@@ -15,6 +15,9 @@ import {
 } from "lucide-react";
 import { ConfirmationModal } from "@/components/common/ConfirmationModal";
 import { cn } from "@/utils/cn";
+import { useAuth } from "@/context/AuthContext";
+import { updateRecruiter } from "@/services/authService";
+import { useEffect } from "react";
 
 interface SettingsItem {
   id: string;
@@ -59,11 +62,41 @@ const initialSections: SettingsSection[] = [
 type VerificationStep = "idle" | "requesting" | "verifying" | "editing";
 
 export default function SettingsPage() {
+  const { user, accessToken } = useAuth();
   const [sections, setSections] = useState(initialSections);
   const [activeSection, setActiveSection] = useState("general");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [tempValue, setTempValue] = useState("");
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Sync sections with user data
+  useEffect(() => {
+    if (user) {
+      setSections(prev => prev.map(section => {
+        if (section.id === "general") {
+          return {
+            ...section,
+            items: section.items.map(item => {
+              if (item.id === "workspace-name") return { ...item, value: user.companyName || "Umurava Africa" };
+              if (item.id === "timezone") return { ...item, value: user.timezone || "CAT (GMT+2)" };
+              return item;
+            })
+          };
+        }
+        if (section.id === "security") {
+          return {
+            ...section,
+            items: section.items.map(item => {
+              if (item.id === "email") return { ...item, value: user.email };
+              return item;
+            })
+          };
+        }
+        return section;
+      }));
+    }
+  }, [user]);
 
   // Verification Flow State
   const [vStep, setVStep] = useState<VerificationStep>("idle");
@@ -101,21 +134,37 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDone = (sectionId: string, itemId: string) => {
-    setSections(prev => prev.map(section => {
-      if (section.id === sectionId) {
-        return {
-          ...section,
-          items: section.items.map(item => 
-            item.id === itemId ? { ...item, value: tempValue } : item
-          )
-        };
-      }
-      return section;
-    }));
-    setEditingItemId(null);
-    setVStep("idle");
-    setVCode("");
+  const handleDone = async (sectionId: string, itemId: string) => {
+    if (!user || !accessToken) return;
+
+    try {
+      setIsSaving(true);
+      const dataToUpdate: any = {};
+      if (itemId === "workspace-name") dataToUpdate.companyName = tempValue;
+      if (itemId === "timezone") dataToUpdate.timezone = tempValue;
+      if (itemId === "email") dataToUpdate.email = tempValue;
+
+      await updateRecruiter(accessToken, user.id, dataToUpdate);
+      
+      setSections(prev => prev.map(section => {
+        if (section.id === sectionId) {
+          return {
+            ...section,
+            items: section.items.map(item => 
+              item.id === itemId ? { ...item, value: tempValue } : item
+            )
+          };
+        }
+        return section;
+      }));
+    } catch (error) {
+      console.error("Failed to update setting:", error);
+    } finally {
+      setIsSaving(false);
+      setEditingItemId(null);
+      setVStep("idle");
+      setVCode("");
+    }
   };
 
   const currentSection = sections.find(s => s.id === activeSection);

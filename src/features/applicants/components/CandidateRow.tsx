@@ -60,25 +60,36 @@ export function CandidateRow({
 
       <div className="flex-1 max-w-[180px] hidden md:block">
         <div className="flex justify-between items-center mb-1.5">
-          <p className="text-sm font-bold text-primary">{score}% <span className="text-[10px] font-medium opacity-60 ml-1">{status}</span></p>
+          <p className="text-sm font-bold text-primary">
+            {score > 0 ? `${score}%` : <span className="text-[10px] text-muted-foreground uppercase">Not Screened</span>}
+            {score > 0 && <span className="text-[10px] font-medium opacity-60 ml-1">{status}</span>}
+          </p>
         </div>
         <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
           <div
             className={cn(
               "h-full rounded-full transition-all duration-1000",
-              status === "Elite" ? "bg-accent" : "bg-primary"
+              score === 0 ? "bg-muted" : status === "Elite" ? "bg-accent" : "bg-primary"
             )}
-            style={{ width: `${score}%` }}
+            style={{ width: `${score || 0}%` }}
           />
         </div>
       </div>
 
-      <div className="hidden lg:flex flex-wrap gap-2 flex-1 justify-center">
-        {tags.slice(0, 3).map(tag => (
-          <span key={tag} className="text-[9px] uppercase font-bold text-primary/60 bg-secondary/50 px-2.5 py-1 rounded-md tracking-wider whitespace-nowrap">
-            {tag}
-          </span>
-        ))}
+      <div className="hidden lg:flex flex-col gap-1 flex-1 items-center">
+        <span className={cn(
+          "text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border",
+          isShortlisted ? "bg-green-50 text-green-600 border-green-100" : "bg-secondary text-primary/60 border-border"
+        )}>
+          {isShortlisted ? "Shortlisted" : "Applied"}
+        </span>
+        <div className="flex flex-wrap gap-1 mt-1 justify-center">
+          {tags.slice(0, 2).map(tag => (
+            <span key={tag} className="text-[8px] uppercase font-bold text-primary/40 bg-secondary/30 px-2 py-0.5 rounded tracking-wider">
+              {tag}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="flex items-center gap-2">

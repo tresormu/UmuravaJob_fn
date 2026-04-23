@@ -31,6 +31,7 @@ interface AuthContextType {
   resendVerificationCode: (email: string) => Promise<string>;
   logout: () => Promise<void>;
   completeOnboarding: () => void;
+  updateUser: (userData: RecruiterUser) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,6 +56,16 @@ const clearPersistedSession = () => {
   localStorage.removeItem(AUTH_SESSION_KEY);
 };
 
+const isTokenExpiredOrExpiringSoon = (token: string): boolean => {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    // Refresh if expired or expiring within the next 60 seconds
+    return Date.now() >= (payload.exp - 60) * 1000;
+  } catch {
+    return true;
+  }
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [isFirstLogin, setIsFirstLogin] = useState(false);
@@ -67,40 +78,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const savedSession = readStoredSession();
       const onboardingDone = localStorage.getItem(ONBOARDING_KEY);
 
-      if (!savedSession) {
-        if (isActive) {
-          setIsFirstLogin(false);
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      if (isActive) {
+      if (savedSession) {
         setSession(savedSession);
         setIsFirstLogin(!onboardingDone);
       }
-
-      try {
-        const refreshedTokens = await refreshRecruiterSession(savedSession.refreshToken);
-        if (!isActive) return;
-
-        const nextSession = {
-          ...savedSession,
-          ...refreshedTokens,
-        };
-
-        setSession(nextSession);
-        persistSession(nextSession);
-      } catch {
-        if (!isActive) return;
-        clearPersistedSession();
-        setSession(null);
-        setIsFirstLogin(false);
-      } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      }
+      setIsLoading(false);
     };
 
     void restoreSession();
@@ -153,6 +135,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(ONBOARDING_KEY, "true");
   };
 
+  const updateUser = (userData: RecruiterUser) => {
+    if (session) {
+      const nextSession = { ...session, user: userData };
+      setSession(nextSession);
+      persistSession(nextSession);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -167,6 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resendVerificationCode,
         logout,
         completeOnboarding,
+        updateUser,
       }}
     >
       {children}

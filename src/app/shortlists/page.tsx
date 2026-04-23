@@ -1,14 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import Link from "next/link";
 import { ShortlistStats } from "@/features/shortlists/components/ShortlistStats";
 import { RankedTable } from "@/features/shortlists/components/RankedTable";
 import { CuratorInsights } from "@/features/shortlists/components/CuratorInsights";
 import { Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useJobs } from "@/context/JobContext";
 
 export default function ShortlistPage() {
+  const { jobs, isLoading } = useJobs();
   const [hidePrinciples, setHidePrinciples] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string>("");
+  const [topCandidates, setTopCandidates] = useState<string[]>([]);
+  const handleTopCandidatesChange = useCallback((names: string[]) => setTopCandidates(names), []);
+
+  // Auto-select first job once loaded
+  if (!selectedJobId && jobs.length > 0) setSelectedJobId(jobs[0].id);
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-[1400px] space-y-10 pb-24 animate-pulse">
+        <div className="soft-panel h-48 bg-secondary rounded-3xl" />
+        <div className="h-32 bg-secondary rounded-3xl" />
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-12">
+          <div className="lg:col-span-8 h-64 bg-secondary rounded-3xl" />
+          <div className="lg:col-span-4 h-64 bg-secondary rounded-3xl" />
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="mx-auto max-w-[1400px] space-y-10 pb-24">
       <div className="soft-panel grid gap-6 p-6 md:grid-cols-[1.4fr_0.9fr] md:p-8">
@@ -21,10 +43,22 @@ export default function ShortlistPage() {
             The shortlist screen provides consistent ranking, clear strengths, and
             visible gaps, allowing recruiters to maintain final oversight of the AI&apos;s recommendations.
           </p>
-          <div className="mt-6">
-            <button className="btn-base btn-md bg-white border border-border text-primary font-black uppercase tracking-widest px-6 hover:bg-secondary transition-all shadow-sm">
-              View Profiles Awaiting Decision
-            </button>
+          <div className="mt-6 flex flex-col sm:flex-row gap-4">
+            <select
+              value={selectedJobId}
+              onChange={(e) => setSelectedJobId(e.target.value)}
+              className="bg-white border border-border rounded-xl px-5 py-3 text-sm font-bold text-primary outline-none focus:ring-2 focus:ring-primary/10 min-w-[240px]"
+            >
+              <option value="" disabled>Select a job...</option>
+              {jobs.map(job => (
+                <option key={job.id} value={job.id}>{job.title}</option>
+              ))}
+            </select>
+            <Link href="/screening">
+              <button className="btn-base btn-md bg-white border border-border text-primary font-black uppercase tracking-widest px-6 hover:bg-secondary transition-all shadow-sm">
+                View Profiles Awaiting Decision
+              </button>
+            </Link>
           </div>
         </div>
         <AnimatePresence>
@@ -64,15 +98,15 @@ export default function ShortlistPage() {
         </AnimatePresence>
       </div>
 
-      <ShortlistStats />
+      <ShortlistStats selectedJobId={selectedJobId} />
 
       <div className="grid grid-cols-1 gap-10 items-start lg:grid-cols-12">
         <div className="lg:col-span-8 space-y-8">
-           <RankedTable />
+           <RankedTable selectedJobId={selectedJobId} onTopCandidatesChange={handleTopCandidatesChange} />
         </div>
 
         <div className="lg:col-span-4">
-           <CuratorInsights />
+           <CuratorInsights topCandidates={topCandidates} />
         </div>
       </div>
     </div>

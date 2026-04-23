@@ -4,6 +4,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, X, Send, Bot, User, MessageCircle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/utils/cn";
+import { useAuth } from "@/context/AuthContext";
+import { chatWithAI } from "@/services/applicantsService";
+import { fetchJobs, JobRecord } from "@/services/jobsService";
+import { Loader2 } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
@@ -16,11 +20,32 @@ interface AIChatSidebarProps {
 }
 
 export function AIChatSidebar({ isOpen, onClose }: AIChatSidebarProps) {
+  const { accessToken, user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "Hello! I'm your Umurava AI assistant. How can I help you with your hiring pipeline today?" }
   ]);
   const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [jobs, setJobs] = useState<JobRecord[]>([]);
+  const [selectedJobId, setSelectedJobId] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Fetch Jobs on mount to allow context-aware chat
+  useEffect(() => {
+    async function loadJobs() {
+      try {
+        const allJobs = await fetchJobs();
+        const recruiterJobs = allJobs.filter(j => j.recruiterId === user?.id);
+        setJobs(recruiterJobs);
+        if (recruiterJobs.length > 0) {
+          setSelectedJobId(recruiterJobs[0].id);
+        }
+      } catch (error) {
+        console.error("Failed to fetch jobs for chat:", error);
+      }
+    }
+    if (user?.id) loadJobs();
+  }, [user?.id]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -28,21 +53,38 @@ export function AIChatSidebar({ isOpen, onClose }: AIChatSidebarProps) {
     }
   }, [messages]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const handleSend = async () => {
+    if (!input.trim() || !selectedJobId || !accessToken || isLoading) return;
     
+    const currentInput = input;
+    const historySnapshot = messages.map(m => ({
+      role: m.role === "user" ? "user" as const : "model" as const,
+      parts: [{ text: m.content }]
+    }));
+
     const userMessage: Message = { role: "user", content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput("");
+    setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const response = await chatWithAI(accessToken, selectedJobId, currentInput, historySnapshot);
+      
       const aiMessage: Message = { 
         role: "assistant", 
-        content: "I'm currently in a preview state. Soon, I'll be able to help you analyze candidate resumes, compare shortlists, and draft interview questions based on your specific job briefs." 
+        content: response.message 
       };
       setMessages(prev => [...prev, aiMessage]);
-    }, 1000);
+    } catch (error) {
+      console.error("AI Chat Error:", error);
+      const errorMessage: Message = {
+        role: "assistant",
+        content: "I'm having trouble connecting to the talent intelligence service. Please try again in a moment."
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -71,7 +113,16 @@ export function AIChatSidebar({ isOpen, onClose }: AIChatSidebarProps) {
                 </div>
                 <div>
                   <h3 className="font-black text-sm uppercase tracking-widest">AI Assistant</h3>
-                  <p className="text-[10px] text-white/60 font-bold uppercase tracking-tight">Umurava Talent Intelligence</p>
+                  <select
+                    value={selectedJobId}
+                    onChange={(e) => setSelectedJobId(e.target.value)}
+                    className="bg-transparent text-[10px] text-white/60 font-bold uppercase tracking-tight border-none outline-none cursor-pointer hover:text-white"
+                  >
+                    <option value="" disabled className="text-primary">Select context...</option>
+                    {jobs.map(job => (
+                      <option key={job.id} value={job.id} className="text-primary">{job.title}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <button 
@@ -108,6 +159,17 @@ export function AIChatSidebar({ isOpen, onClose }: AIChatSidebarProps) {
                   </div>
                 </div>
               ))}
+              {isLoading && (
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center">
+                    <Bot className="w-4 h-4" />
+                  </div>
+                  <div className="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-border/50 flex items-center gap-3">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <span className="text-xs font-bold text-primary animate-pulse">Thinking...</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Input */}
