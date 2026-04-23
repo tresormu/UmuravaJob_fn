@@ -10,20 +10,24 @@ interface CandidateRowProps {
   tags: string[];
   status: string;
   isShortlisted?: boolean;
+  isSelected?: boolean;
+  onSelect?: (id: string, selected: boolean) => void;
   onShortlistToggle?: (id: string) => void;
   onDelete?: (id: string) => void;
   onViewDetails?: (id: string) => void;
 }
 
-export function CandidateRow({ 
+export function CandidateRow({
   id,
-  rank, 
-  name, 
-  role, 
-  score, 
-  tags, 
+  rank,
+  name,
+  role,
+  score,
+  tags,
   status,
   isShortlisted,
+  isSelected,
+  onSelect,
   onShortlistToggle,
   onDelete,
   onViewDetails
@@ -31,10 +35,19 @@ export function CandidateRow({
   return (
     <div className={cn(
       "bg-white p-5 rounded-2xl border transition-all font-inter flex items-center gap-6 group relative mb-4 shadow-sm",
-      isShortlisted ? "border-accent bg-accent/[0.02]" : "border-border hover:border-primary/20"
+      isSelected ? "border-primary bg-primary/[0.02]" : isShortlisted ? "border-accent bg-accent/[0.02]" : "border-border hover:border-primary/20"
     )}>
-      <div className="text-3xl font-bold text-muted-foreground/30 w-12 text-center">{rank}</div>
-      
+      <div className="flex items-center gap-4 w-12 flex-shrink-0">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={(e) => onSelect?.(id, e.target.checked)}
+          className="w-5 h-5 rounded-lg border-2 border-border text-primary focus:ring-primary/20 cursor-pointer transition-all accent-primary"
+        />
+      </div>
+
+      <div className="text-3xl font-bold text-muted-foreground/30 w-12 text-center hidden sm:block">{rank}</div>
+
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all overflow-hidden border border-border flex-shrink-0">
           <User className="w-6 h-6" />
@@ -50,12 +63,12 @@ export function CandidateRow({
           <p className="text-sm font-bold text-primary">{score}% <span className="text-[10px] font-medium opacity-60 ml-1">{status}</span></p>
         </div>
         <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-          <div 
+          <div
             className={cn(
               "h-full rounded-full transition-all duration-1000",
               status === "Elite" ? "bg-accent" : "bg-primary"
-            )} 
-            style={{ width: `${score}%` }} 
+            )}
+            style={{ width: `${score}%` }}
           />
         </div>
       </div>
@@ -69,20 +82,20 @@ export function CandidateRow({
       </div>
 
       <div className="flex items-center gap-2">
-        <button 
+        <button
           onClick={() => onShortlistToggle?.(id)}
           className={cn(
             "p-2.5 rounded-xl transition-all border",
-            isShortlisted 
-              ? "bg-accent text-white border-accent shadow-md shadow-accent/20" 
+            isShortlisted
+              ? "bg-accent text-white border-accent shadow-md shadow-accent/20"
               : "bg-secondary text-muted-foreground border-transparent hover:border-accent/40 hover:text-accent"
           )}
           title={isShortlisted ? "Remove from shortlist" : "Add to shortlist"}
         >
           <Star className={cn("w-4 h-4", isShortlisted && "fill-current")} />
         </button>
-        
-        <button 
+
+        <button
           onClick={() => onViewDetails?.(id)}
           className="bg-secondary text-primary px-4 py-2.5 rounded-xl font-bold text-xs hover:bg-primary hover:text-white transition-all flex items-center gap-2 shadow-sm whitespace-nowrap"
         >
@@ -90,7 +103,7 @@ export function CandidateRow({
           <ChevronRight className="w-4 h-4" />
         </button>
 
-        <button 
+        <button
           onClick={() => onDelete?.(id)}
           className="p-2.5 text-muted-foreground hover:bg-red-50 hover:text-red-500 rounded-xl transition-all opacity-0 group-hover:opacity-100"
           title="Delete applicant"

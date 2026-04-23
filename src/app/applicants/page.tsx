@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { UploadCard } from "@/features/applicants/components/UploadCard";
 import { CandidateRow } from "@/features/applicants/components/CandidateRow";
+import { AiChatDrawer } from "@/features/applicants/components/AiChatDrawer";
 import {
   Plus,
   Search,
@@ -15,6 +16,7 @@ import {
   ChevronRight,
   SlidersHorizontal,
   FileSpreadsheet,
+  BrainCircuit,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,10 +24,12 @@ import { ConfirmationModal } from "@/components/common/ConfirmationModal";
 import { BaseModal } from "@/components/common/BaseModal";
 import { useAuth } from "@/context/AuthContext";
 import {
+  bulkUpdateApplicantsStatus,
   deleteApplicant,
   fetchApplicants,
   updateApplicantStatus,
   uploadApplicantPdfs,
+  uploadApplicantSpreadsheet,
   type ApplicantRecord,
 } from "@/services/applicantsService";
 import {
@@ -51,6 +55,9 @@ export default function ApplicantsPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadFeedback, setUploadFeedback] = useState<string | null>(null);
   const [applicantToDelete, setApplicantToDelete] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -214,6 +221,69 @@ export default function ApplicantsPage() {
     }
   };
 
+  const handleSelect = (id: string, selected: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (selected) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      setSelectedIds(new Set(currentApplicants.map((a) => a.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleBulkMove = async (status: any) => {
+    if (selectedIds.size === 0 || !accessToken) return;
+
+    setIsBulkUpdating(true);
+    try {
+      await bulkUpdateApplicantsStatus(accessToken, Array.from(selectedIds), status);
+
+      // Update local state
+      setApplicants((prev) =>
+        prev.map((app) =>
+          selectedIds.has(app.id) ? { ...app, status } : app
+        )
+      );
+
+      setSelectedIds(new Set());
+      setUploadFeedback(`Successfully moved ${selectedIds.size} applicant(s) to ${status}`);
+      setTimeout(() => setUploadFeedback(null), 3000);
+    } catch (err: any) {
+      setError(err.message || "Failed to update applicants");
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0 || !accessToken) return;
+
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} applicant(s)?`)) return;
+
+    setIsBulkUpdating(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) => deleteApplicant(accessToken, id))
+      );
+
+      setApplicants((prev) => prev.filter((app) => !selectedIds.has(app.id)));
+      setSelectedIds(new Set());
+      setUploadFeedback(`Successfully deleted ${selectedIds.size} applicant(s)`);
+      setTimeout(() => setUploadFeedback(null), 3000);
+    } catch (err: any) {
+      setError(err.message || "Failed to delete applicants");
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
   const handleFilesSelected = async (files: File[]) => {
     if (!accessToken || !selectedJobId) {
       setError("Please select a job brief first.");
@@ -224,21 +294,48 @@ export default function ApplicantsPage() {
     setUploadFeedback(`Analyzing ${files.length} resume(s)...`);
 
     try {
-      const newApplicants = await uploadApplicantPdfs(accessToken, selectedJobId, files);
+      const pdfs = files.filter(f => f.type === "application/pdf");
+      const sheets = files.filter(f => f.type !== "application/pdf");
 
-      // Refresh the entire list for consistency
-      const allApplicants = await fetchApplicants(accessToken);
+      let totalImported = 0;
+
+      if (pdfs.length > 0) {
+        setUploadFeedback(`Analyzing ${pdfs.length} PDF resume(s)...`);
+        const res = await uploadApplicantPdfs(accessToken, selectedJobId, pdfs);
+        totalImported += res.length;
+      }
+
+      if (sheets.length > 0) {
+        for (const sheet of sheets) {
+          setUploadFeedback(`Importing ${sheet.name}...`);
+          const res = await uploadApplicantSpreadsheet(accessToken, selectedJobId, sheet);
+          totalImported += res.count;
+        }
+      }
+
+      // Refresh the relevant pipeline for consistency
+      const allApplicants = await fetchApplicants(accessToken, selectedJobId);
       setApplicants(allApplicants);
 
-      setUploadFeedback(`Successfully imported ${newApplicants.length} applicant(s).`);
+      setUploadFeedback(`Successfully imported ${totalImported} applicant(s).`);
       setTimeout(() => {
         setIsImportModalOpen(false);
         setUploadFeedback(null);
       }, 2000);
-    } catch (uploadError) {
-      setUploadFeedback(
-        uploadError instanceof Error ? uploadError.message : "Failed to process resumes."
-      );
+    } catch (uploadError: any) {
+      console.error("[Upload] Error details:", uploadError);
+
+      let message = uploadError.message || "Failed to process resumes.";
+
+      // If we have detailed failure info, append it
+      if (uploadError.failed && Array.from(uploadError.failed).length > 0) {
+        const details = (uploadError.failed as any[])
+          .map(f => `${f.fileName}: ${f.error}`)
+          .join(" | ");
+        message = `${message} (Details: ${details})`;
+      }
+
+      setUploadFeedback(message);
     } finally {
       setIsUploading(false);
     }
@@ -357,11 +454,20 @@ export default function ApplicantsPage() {
           )}
           <button
             onClick={() => setIsImportModalOpen(true)}
-            className="px-6 py-3 rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+            className="px-6 py-3 rounded-2xl bg-secondary text-primary text-xs font-black uppercase tracking-widest border border-border/50 hover:bg-white transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Import Talent
           </button>
+          {selectedJobId && (
+            <button
+              onClick={() => setIsChatOpen(true)}
+              className="px-6 py-3 rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+            >
+              <BrainCircuit className="w-4 h-4" />
+              Chat with AI
+            </button>
+          )}
         </div>
       </div>
 
@@ -412,7 +518,20 @@ export default function ApplicantsPage() {
             </div>
           </div>
 
-          <div className="min-h-[400px]">
+          <div className="flex items-center justify-between px-4 mb-4">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={selectedIds.size === currentApplicants.length && currentApplicants.length > 0}
+                onChange={(e) => handleSelectAll(e.target.checked)}
+                className="w-5 h-5 rounded-lg border-2 border-border text-primary focus:ring-primary/20 cursor-pointer transition-all accent-primary"
+              />
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Select All Candidates</span>
+            </div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{currentApplicants.length} Applicants found</div>
+          </div>
+
+          <div className="min-h-[400px] relative">
             <AnimatePresence mode="popLayout">
               {currentApplicants.length > 0 ? (
                 currentApplicants.map((applicant, index) => (
@@ -438,6 +557,8 @@ export default function ApplicantsPage() {
                       tags={applicant.tags}
                       status={applicant.scoreLabel}
                       isShortlisted={applicant.isShortlisted}
+                      isSelected={selectedIds.has(applicant.id)}
+                      onSelect={handleSelect}
                       onShortlistToggle={handleToggleShortlist}
                       onDelete={handleDeleteApplicant}
                       onViewDetails={(id) => router.push(`/applicants/${id}`)}
@@ -477,7 +598,11 @@ export default function ApplicantsPage() {
 
         {currentApplicants.length === 0 && (
           <div className="lg:col-span-4 space-y-6">
-            <UploadCard className="opacity-70" />
+            <UploadCard
+              onFilesSelected={handleFilesSelected}
+              isUploading={isUploading}
+              className="opacity-70"
+            />
 
             <div className="soft-panel p-8 space-y-6">
               <div className="flex items-center justify-between">
@@ -553,6 +678,7 @@ export default function ApplicantsPage() {
           <div className={cn(isUploading && "pointer-events-none opacity-50")}>
             <UploadCard
               onFilesSelected={handleFilesSelected}
+              isUploading={isUploading}
             />
           </div>
 
@@ -566,6 +692,59 @@ export default function ApplicantsPage() {
           )}
         </div>
       </BaseModal>
+      <AnimatePresence>
+        {selectedIds.size > 0 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-primary text-white px-8 py-4 rounded-[2rem] shadow-2xl flex items-center gap-8 border border-white/10 backdrop-blur-xl"
+          >
+            <div className="flex items-center gap-3 pr-8 border-r border-white/10">
+              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-black text-sm">
+                {selectedIds.size}
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Selected</span>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Move to stage:</span>
+                <div className="flex items-center gap-1.5 p-1 bg-white/5 rounded-xl border border-white/5">
+                  {["applied", "screened", "shortlisted", "rejected"].map((stage) => (
+                    <button
+                      key={stage}
+                      onClick={() => handleBulkMove(stage)}
+                      disabled={isBulkUpdating}
+                      className="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-white hover:text-primary transition-all disabled:opacity-50"
+                    >
+                      {stage}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="h-8 w-px bg-white/10 mx-2" />
+
+              <button
+                onClick={handleBulkDelete}
+                disabled={isBulkUpdating}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 text-red-100 hover:bg-red-500 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AiChatDrawer
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        jobId={selectedJobId || ""}
+        accessToken={accessToken || ""}
+        jobTitle={selectedJob?.title}
+      />
     </div>
   );
 }

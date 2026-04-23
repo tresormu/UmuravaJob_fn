@@ -6,15 +6,21 @@ import { cn } from "@/utils/cn";
 
 interface UploadCardProps {
   onFilesSelected?: (files: File[]) => void;
+  isUploading?: boolean;
   className?: string;
 }
 
 const ACCEPTED_EXTENSIONS = [".json", ".csv", ".xlsx", ".xls", ".pdf"];
 
-export function UploadCard({ onFilesSelected, className }: UploadCardProps) {
+export function UploadCard({ onFilesSelected, isUploading, className }: UploadCardProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+
+  // Clear feedback when uploading finishes
+  if (!isUploading && feedback?.includes("Processing")) {
+    setFeedback(null);
+  }
 
   const handleFiles = (list: FileList | null) => {
     if (!list) return;
@@ -29,8 +35,13 @@ export function UploadCard({ onFilesSelected, className }: UploadCardProps) {
       return;
     }
 
-    setFeedback(`Processing ${validFiles.length} file(s)...`);
-    onFilesSelected?.(validFiles);
+    if (onFilesSelected) {
+      setFeedback(`Processing ${validFiles.length} file(s)...`);
+      onFilesSelected(validFiles);
+    } else {
+      setFeedback("Intake not yet connected here.");
+    }
+
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -61,9 +72,9 @@ export function UploadCard({ onFilesSelected, className }: UploadCardProps) {
           className="hidden"
           onChange={(e) => handleFiles(e.target.files)}
         />
-        
+
         <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground group-hover:scale-110 transition-transform">
-           <FileSpreadsheet className="w-6 h-6" />
+          <FileSpreadsheet className="w-6 h-6" />
         </div>
 
         <div>
@@ -74,18 +85,18 @@ export function UploadCard({ onFilesSelected, className }: UploadCardProps) {
 
       <div className="space-y-3">
         <div className="flex items-start gap-3 p-4 bg-secondary/50 rounded-xl">
-           <Info className="w-4 h-4 text-primary mt-0.5" />
-           <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-primary">Source Labeling</p>
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Applicants will be automatically tagged with their source file name for tracking.</p>
-           </div>
+          <Info className="w-4 h-4 text-primary mt-0.5" />
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Source Labeling</p>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Applicants will be automatically tagged with their source file name for tracking.</p>
+          </div>
         </div>
       </div>
 
       {feedback && (
         <div className="flex items-center gap-2 p-3 bg-accent/10 border border-accent/20 rounded-xl">
-           <AlertCircle className="w-4 h-4 text-accent" />
-           <span className="text-[10px] font-bold text-accent uppercase tracking-wider">{feedback}</span>
+          <AlertCircle className="w-4 h-4 text-accent" />
+          <span className="text-[10px] font-bold text-accent uppercase tracking-wider">{feedback}</span>
         </div>
       )}
     </div>

@@ -146,8 +146,8 @@ export const mapApplicant = (applicant: BackendApplicant): ApplicantRecord => {
   const tags = applicant.tags?.length ? applicant.tags : skills.slice(0, 4);
 
   return {
-    id: applicant.id ?? applicant._id ?? applicant.fullName,
-    jobId: applicant.jobId,
+    id: String(applicant.id ?? applicant._id ?? applicant.fullName),
+    jobId: applicant.jobId ? String(applicant.jobId) : undefined,
     name: applicant.fullName,
     role: deriveRole(applicant),
     score,
@@ -230,6 +230,55 @@ export async function deleteApplicant(
   });
 }
 
+export async function bulkUpdateApplicantsStatus(
+  accessToken: string,
+  ids: string[],
+  status: ApplicantStatus
+): Promise<void> {
+  await apiRequest(`/applicants/bulk-update`, {
+    method: "PATCH",
+    headers: withAuthHeaders(accessToken),
+    body: { ids, status },
+  });
+}
+
+export async function chatWithAI(
+  accessToken: string,
+  jobId: string,
+  message: string,
+  history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = []
+): Promise<{ message: string }> {
+  return apiRequest(`/recruiter/chat/${jobId}`, {
+    method: "POST",
+    headers: withAuthHeaders(accessToken),
+    body: { message, history },
+  });
+}
+
+export async function uploadApplicantSpreadsheet(
+  accessToken: string,
+  jobId: string,
+  file: File
+): Promise<any> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_BASE_URL}/applicants/applicant-screening/spreadsheet?jobId=${jobId}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Spreadsheet upload failed");
+  }
+
+  return response.json();
+}
+
 export async function uploadApplicantPdfs(
   accessToken: string,
   jobId: string,
@@ -246,11 +295,13 @@ export async function uploadApplicantPdfs(
     body: formData,
   });
 
+  const result = await response.json();
+
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || "Failed to upload PDFs");
+    const error: any = new Error(result.message || "Failed to upload PDFs");
+    error.failed = result.failed;
+    throw error;
   }
 
-  const result = await response.json();
   return result.results.map((r: any) => r.savedApplicant);
 }
