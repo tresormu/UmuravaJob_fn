@@ -6,6 +6,7 @@ import Link from "next/link";
 import { UploadCard } from "@/features/applicants/components/UploadCard";
 import { CandidateRow } from "@/features/applicants/components/CandidateRow";
 import { AiChatDrawer } from "@/features/applicants/components/AiChatDrawer";
+import { CandidateDetail } from "@/features/applicants/components/CandidateDetail";
 import {
   Plus,
   Search,
@@ -58,6 +59,7 @@ export default function ApplicantsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [selectedApplicant, setSelectedApplicant] = useState<ApplicantRecord | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -281,6 +283,26 @@ export default function ApplicantsPage() {
       setError(err.message || "Failed to delete applicants");
     } finally {
       setIsBulkUpdating(false);
+    }
+  };
+
+  const handleViewDetails = (id: string) => {
+    const found = applicants.find((a) => a.id === id);
+    if (found) setSelectedApplicant(found);
+  };
+
+  const handleDetailStatusChange = async (id: string, status: string) => {
+    if (!accessToken) return;
+    try {
+      await updateApplicantStatus(accessToken, id, status);
+      setApplicants((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, workflowStatus: status as ApplicantRecord["workflowStatus"] } : a))
+      );
+      setSelectedApplicant((prev) =>
+        prev?.id === id ? { ...prev, workflowStatus: status as ApplicantRecord["workflowStatus"] } : prev
+      );
+    } catch (err: any) {
+      setError(err.message || "Failed to update applicant status");
     }
   };
 
@@ -561,7 +583,7 @@ export default function ApplicantsPage() {
                       onSelect={handleSelect}
                       onShortlistToggle={handleToggleShortlist}
                       onDelete={handleDeleteApplicant}
-                      onViewDetails={(id) => router.push(`/applicants/${id}`)}
+                      onViewDetails={handleViewDetails}
                     />
                   </motion.div>
                 ))
@@ -745,6 +767,36 @@ export default function ApplicantsPage() {
         accessToken={accessToken || ""}
         jobTitle={selectedJob?.title}
       />
+
+      {/* Candidate Detail Slide-over */}
+      <AnimatePresence>
+        {selectedApplicant && (
+          <>
+            <motion.div
+              key="detail-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedApplicant(null)}
+              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[100]"
+            />
+            <motion.div
+              key="detail-panel"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-white shadow-2xl z-[101] flex flex-col border-l border-border"
+            >
+              <CandidateDetail
+                applicant={selectedApplicant}
+                onClose={() => setSelectedApplicant(null)}
+                onStatusChange={handleDetailStatusChange}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

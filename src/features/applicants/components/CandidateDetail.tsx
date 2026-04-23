@@ -2,178 +2,260 @@
 
 import { MatchIntensity } from "@/features/applicants/components/MatchIntensity";
 import { SkillMatrix } from "@/features/applicants/components/SkillMatrix";
-import { CheckCircle2, Download, FileBadge2, IdCard, Share2, MapPin, Briefcase, UserCheck, Target } from "lucide-react";
-import { CandidateProfile } from "@/features/applicants/data/candidates";
+import {
+  CheckCircle2, X, MapPin, Briefcase, UserCheck, Target,
+  Mail, Phone, Star, Clock, ExternalLink,
+} from "lucide-react";
+import { cn } from "@/utils/cn";
+import type { ApplicantRecord } from "@/services/applicantsService";
 
-export function CandidateDetail({ candidate }: { candidate: CandidateProfile }) {
+interface CandidateDetailProps {
+  applicant: ApplicantRecord;
+  onClose: () => void;
+  onStatusChange?: (id: string, status: string) => void;
+}
+
+function parseAiSummaryIntoPoints(summary: string): { title: string; desc: string }[] {
+  if (!summary) return [];
+  const lines = summary
+    .split(/[\n•\-]+/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 10);
+
+  return lines.slice(0, 3).map((line) => {
+    const parts = line.split(":");
+    return {
+      title: parts.length > 1 ? parts[0].trim() : "Key Insight",
+      desc: parts.length > 1 ? parts.slice(1).join(":").trim() : line,
+    };
+  });
+}
+
+const statusColors: Record<string, string> = {
+  applied: "bg-blue-100 text-blue-700 border-blue-200",
+  screened: "bg-amber-100 text-amber-700 border-amber-200",
+  shortlisted: "bg-green-100 text-green-700 border-green-200",
+  rejected: "bg-red-100 text-red-700 border-red-200",
+};
+
+export function CandidateDetail({ applicant, onClose, onStatusChange }: CandidateDetailProps) {
+  const score = applicant.score ?? 0;
+  const skills = applicant.skills ?? [];
+  const experienceYears = applicant.experience?.length ?? 0;
+  const summary = applicant.aiSummary ?? "";
+  const insights = parseAiSummaryIntoPoints(summary);
+
+  const skillMatrixItems = skills.slice(0, 4).map((skill: string, i: number) => ({
+    label: skill,
+    score: Math.min(10, score / 10 + (i % 2 === 0 ? 0.5 : -0.3)),
+    benchmark: 7.5,
+  }));
+
   return (
-    <div className="space-y-8 max-w-6xl mx-auto pb-32">
-      {/* Profile Header Dashboard */}
-      <div className="bg-white p-6 md:p-10 rounded-3xl md:rounded-[40px] border border-border premium-shadow-lg flex flex-col md:flex-row md:items-center justify-between relative overflow-hidden gap-6">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full translate-x-32 -translate-y-32"></div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 md:gap-10 relative z-10">
-          <div className="w-20 h-20 md:w-28 md:h-28 rounded-2xl md:rounded-3xl bg-primary/10 overflow-hidden border-2 border-primary/20 shadow-inner flex-shrink-0">
-             <div className="w-full h-full bg-[#004D4D] flex items-center justify-center">
-                <UserCheck className="w-8 h-8 md:w-12 md:h-12 text-white/40" />
-             </div>
+    <div className="flex flex-col h-full overflow-y-auto bg-gray-50/40">
+      {/* Header */}
+      <div className="bg-white border-b border-border px-8 py-6 flex items-start justify-between gap-4 sticky top-0 z-10">
+        <div className="flex items-center gap-5">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-xl flex-shrink-0">
+            {applicant.name?.charAt(0) ?? "?"}
           </div>
-          <div className="space-y-2 md:space-y-3">
-            <div className="flex flex-wrap items-baseline gap-3 md:gap-4">
-              <h2 className="text-2xl md:text-4xl font-bold text-primary tracking-tight">{candidate.name}</h2>
-              <span className="bg-[#E6F2F2] text-primary text-[9px] md:text-[10px] font-bold px-3 md:px-4 py-1 md:py-1.5 rounded-full border border-primary/20 shadow-sm">
-                {candidate.matchCategory === "Elite" ? "TOP 1% MATCH" : "HIGH MATCH"}
+          <div>
+            <h2 className="text-xl font-black text-primary tracking-tight">{applicant.name}</h2>
+            <div className="flex flex-wrap items-center gap-3 mt-1">
+              <span className={cn(
+                "text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border",
+                statusColors[applicant.workflowStatus] ?? "bg-gray-100 text-gray-600 border-gray-200"
+              )}>
+                {applicant.workflowStatus}
               </span>
-            </div>
-            <p className="text-lg md:text-xl text-primary/60 font-medium italic tracking-wide">{candidate.role}</p>
-            <div className="flex flex-wrap items-center gap-4 md:gap-8 text-[10px] md:text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground pt-1 md:pt-2">
-              <span className="flex items-center gap-2 md:gap-2.5"><MapPin className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary/30" /> {candidate.location}</span>
-              <span className="flex items-center gap-2 md:gap-2.5"><Briefcase className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary/30" /> {candidate.experience}</span>
-              <span className="flex items-center gap-2 md:gap-2.5 text-accent"><UserCheck className="w-3.5 h-3.5 md:w-4 md:h-4" /> Verified Identity</span>
+              {applicant.source && (
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                  via {applicant.source}
+                </span>
+              )}
             </div>
           </div>
         </div>
-        <div className="flex gap-3 md:gap-4 relative z-10 w-full md:w-auto">
-           <button className="flex-1 md:flex-none btn-secondary btn-md gap-2">
-             <Download className="w-4 h-4" />
-             CV
-           </button>
-           <button className="flex-1 md:flex-none btn-secondary btn-md gap-2">
-             <Share2 className="w-4 h-4" />
-             Share
-           </button>
-        </div>
+        <button onClick={onClose} className="p-2 hover:bg-secondary rounded-full transition-all flex-shrink-0">
+          <X className="w-5 h-5 text-muted-foreground" />
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
-        {/* Alignment Analysis Card Dashboard */}
-        <div className="lg:col-span-12 xl:col-span-5 bg-white p-8 md:p-10 rounded-3xl md:rounded-[40px] border border-border flex flex-col items-center justify-center space-y-8 md:space-y-10 shadow-sm">
-          <p className="text-[10px] md:text-[11px] uppercase font-bold text-muted-foreground tracking-[0.2em]">Alignment Accuracy</p>
-          <div className="scale-75 md:scale-100">
-            <MatchIntensity score={candidate.matchScore} size={240} strokeWidth={18} />
+      {/* Body */}
+      <div className="p-8 space-y-6">
+        {/* Contact & Meta */}
+        <div className="grid grid-cols-2 gap-4">
+          {applicant.email && (
+            <div className="bg-white rounded-2xl border border-border p-4 flex items-center gap-3">
+              <Mail className="w-4 h-4 text-primary/40 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Email</p>
+                <p className="text-sm font-bold text-primary truncate">{applicant.email}</p>
+              </div>
+            </div>
+          )}
+          {applicant.phone && (
+            <div className="bg-white rounded-2xl border border-border p-4 flex items-center gap-3">
+              <Phone className="w-4 h-4 text-primary/40 flex-shrink-0" />
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Phone</p>
+                <p className="text-sm font-bold text-primary">{applicant.phone}</p>
+              </div>
+            </div>
+          )}
+          {applicant.location && (
+            <div className="bg-white rounded-2xl border border-border p-4 flex items-center gap-3">
+              <MapPin className="w-4 h-4 text-primary/40 flex-shrink-0" />
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Location</p>
+                <p className="text-sm font-bold text-primary">{applicant.location}</p>
+              </div>
+            </div>
+          )}
+          {applicant.experience?.length > 0 && (
+            <div className="bg-white rounded-2xl border border-border p-4 flex items-center gap-3">
+              <Briefcase className="w-4 h-4 text-primary/40 flex-shrink-0" />
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Experience</p>
+                <p className="text-sm font-bold text-primary">{applicant.experience[0]}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* AI Score */}
+        {score > 0 && (
+          <div className="bg-white rounded-3xl border border-border p-8 flex flex-col items-center gap-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">AI Match Score</p>
+            <MatchIntensity score={score} size={180} strokeWidth={14} />
+            <p className="text-xs text-muted-foreground text-center max-w-[240px] leading-relaxed font-medium">
+              Score based on Gemini AI analysis of skills alignment and experience.
+            </p>
           </div>
-          <p className="text-xs md:text-sm text-muted-foreground text-center max-w-[280px] leading-relaxed font-medium">
-            Score based on <span className="font-bold text-primary">14</span> cross-verified skill dimensions and requirement alignment.
-          </p>
-        </div>
+        )}
 
-        {/* Strategic Analysis Card Dashboard */}
-        <div className="lg:col-span-12 xl:col-span-7 space-y-6 md:space-y-8">
-           <div className="bg-white p-8 md:p-10 rounded-3xl md:rounded-[40px] border border-border shadow-sm flex flex-col h-full">
-              <div className="flex items-center gap-3 mb-6 md:mb-8">
-                <div className="p-2 md:p-2.5 bg-primary/5 rounded-xl text-primary border border-primary/10">
-                  <UserCheck className="w-4 h-4 md:w-5 md:h-5" />
-                </div>
-                <h3 className="font-bold text-lg md:text-xl text-primary">Strategic Analysis</h3>
+        {/* AI Summary */}
+        {summary && (
+          <div className="bg-white rounded-3xl border border-border p-8 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/5 text-primary rounded-xl border border-primary/10">
+                <UserCheck className="w-4 h-4" />
               </div>
-              
-              <div className="flex-1 bg-secondary p-6 md:p-10 rounded-2xl md:rounded-3xl border-l-[6px] border-primary relative overflow-hidden">
-                 <div className="absolute -top-6 -left-2 text-primary/5 text-8xl md:text-[120px] font-serif leading-none">&ldquo;</div>
-                 <p className="text-primary italic text-lg md:text-xl leading-relaxed relative z-10 font-medium">
-                   &ldquo;{candidate.analysis}&rdquo;
-                 </p>
-              </div>
+              <h3 className="font-black text-primary uppercase tracking-wider text-sm">AI Strategic Analysis</h3>
+            </div>
+            <div className="bg-secondary p-6 rounded-2xl border-l-4 border-primary">
+              <p className="text-primary italic text-sm leading-relaxed font-medium">&ldquo;{summary}&rdquo;</p>
+            </div>
+          </div>
+        )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-8 mt-8 md:mt-10">
-                 <div className="bg-secondary/50 p-4 md:p-6 rounded-xl md:rounded-2xl border border-border">
-                    <p className="text-[9px] md:text-[10px] uppercase font-bold text-muted-foreground tracking-widest mb-1.5">Alignment Index</p>
-                    <p className="text-xl md:text-2xl font-bold text-primary">{candidate.culturalPulse}% Match</p>
-                 </div>
-                 <div className="bg-secondary/50 p-4 md:p-6 rounded-xl md:rounded-2xl border border-border">
-                    <p className="text-[9px] md:text-[10px] uppercase font-bold text-muted-foreground tracking-widest mb-1.5">Employment Stability</p>
-                    <p className="text-xl md:text-2xl font-bold text-primary">{candidate.retentionRisk}</p>
-                 </div>
+        {/* Key Insights (parsed from summary) */}
+        {insights.length > 0 && (
+          <div className="bg-white rounded-3xl border border-border p-8 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/5 text-primary rounded-xl border border-primary/10">
+                <CheckCircle2 className="w-4 h-4" />
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-8 mt-4">
-                 <div className="bg-secondary/50 p-4 md:p-6 rounded-xl md:rounded-2xl border border-border">
-                    <div className="flex items-center gap-2 text-primary">
-                      <FileBadge2 className="w-4 h-4" />
-                      <p className="text-[9px] md:text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Resume ID</p>
-                    </div>
-                    <p className="mt-2 text-lg md:text-xl font-bold text-primary">{candidate.resumeId}</p>
-                 </div>
-                 <div className="bg-secondary/50 p-4 md:p-6 rounded-xl md:rounded-2xl border border-border">
-                    <div className="flex items-center gap-2 text-primary">
-                      <IdCard className="w-4 h-4" />
-                      <p className="text-[9px] md:text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Passport ID</p>
-                    </div>
-                    <p className="mt-2 text-lg md:text-xl font-bold text-primary">{candidate.passportId}</p>
-                 </div>
-              </div>
-           </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        {/* Portfolio Strengths Dashboard */}
-        <div className="bg-white p-8 md:p-10 rounded-3xl md:rounded-[40px] border border-border shadow-sm space-y-6 md:space-y-8">
-           <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/5 text-primary rounded-lg border border-primary/10">
-                 <CheckCircle2 className="w-5 h-5" />
-              </div>
-              <h3 className="font-bold text-sm md:text-base text-primary uppercase tracking-[0.2em]">Portfolio Strengths</h3>
-           </div>
-           <ul className="space-y-6 md:space-y-8">
-              {candidate.strengths.map((item, i) => (
-                <li key={i} className="flex gap-4 md:gap-5 items-start">
-                   <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
-                   <div>
-                      <p className="font-bold text-primary mb-1 text-base md:text-lg tracking-tight">{item.title}</p>
-                      <p className="text-xs md:text-sm text-muted-foreground leading-relaxed font-medium">{item.desc}</p>
-                   </div>
+              <h3 className="font-black text-primary uppercase tracking-wider text-sm">Key Insights</h3>
+            </div>
+            <ul className="space-y-5">
+              {insights.map((item, i) => (
+                <li key={i} className="flex gap-4 items-start">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-black text-primary text-sm tracking-tight">{item.title}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{item.desc}</p>
+                  </div>
                 </li>
               ))}
-           </ul>
-        </div>
+            </ul>
+          </div>
+        )}
 
-        {/* Growth Observations Dashboard */}
-        <div className="bg-white p-8 md:p-10 rounded-3xl md:rounded-[40px] border border-border shadow-sm space-y-6 md:space-y-8">
-           <div className="flex items-center gap-3">
-              <div className="p-2 bg-accent/5 text-accent rounded-lg border border-accent/10">
-                 <Target className="w-5 h-5" />
+        {/* Skills */}
+        {skills.length > 0 && (
+          <div className="bg-white rounded-3xl border border-border p-8 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-accent/5 text-accent rounded-xl border border-accent/10">
+                <Target className="w-4 h-4" />
               </div>
-              <h3 className="font-bold text-sm md:text-base text-primary uppercase tracking-[0.2em]">Growth Observations</h3>
-           </div>
-           <ul className="space-y-6 md:space-y-8">
-              {candidate.gaps.map((item, i) => (
-                <li key={i} className="flex gap-4 md:gap-5 items-start">
-                   <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-accent mt-2 flex-shrink-0"></div>
-                   <div>
-                      <p className="font-bold text-primary mb-1 text-base md:text-lg tracking-tight">{item.title}</p>
-                      <p className="text-xs md:text-sm text-muted-foreground leading-relaxed font-medium">{item.desc}</p>
-                   </div>
-                </li>
+              <h3 className="font-black text-primary uppercase tracking-wider text-sm">Extracted Skills</h3>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {skills.map((skill: string, i: number) => (
+                <span key={i} className="text-[10px] font-black uppercase tracking-wider bg-secondary border border-border text-primary px-3 py-1.5 rounded-xl">
+                  {skill}
+                </span>
               ))}
-           </ul>
-        </div>
+            </div>
+            {skillMatrixItems.length > 0 && (
+              <div className="pt-4">
+                <SkillMatrix skills={skillMatrixItems} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Links */}
+        {(applicant.linkedInUrl || applicant.portfolioUrl || applicant.resumeUrl) && (
+          <div className="bg-white rounded-3xl border border-border p-6 space-y-3">
+            <h3 className="font-black text-primary uppercase tracking-wider text-[10px]">External Links</h3>
+            <div className="flex flex-col gap-2">
+              {applicant.linkedInUrl && (
+                <a href={applicant.linkedInUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm font-bold text-primary hover:text-accent transition-colors">
+                  <ExternalLink className="w-3.5 h-3.5" /> LinkedIn Profile
+                </a>
+              )}
+              {applicant.portfolioUrl && (
+                <a href={applicant.portfolioUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm font-bold text-primary hover:text-accent transition-colors">
+                  <ExternalLink className="w-3.5 h-3.5" /> Portfolio
+                </a>
+              )}
+              {applicant.resumeUrl && (
+                <a href={applicant.resumeUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm font-bold text-primary hover:text-accent transition-colors">
+                  <ExternalLink className="w-3.5 h-3.5" /> Resume / CV
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Applied at */}
+        {applicant.createdAt && (
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+            <Clock className="w-3 h-3" />
+            Applied {new Date(applicant.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+          </div>
+        )}
       </div>
 
-      {/* Skill Matrix Dashboard */}
-      <div className="bg-white p-6 md:p-10 rounded-3xl md:rounded-[40px] border border-border shadow-sm">
-        <SkillMatrix 
-          skills={[
-            { label: "Backend Systems (Go, Node.js)", score: 9.2, benchmark: 8.5 },
-            { label: "Database Architecture (Postgres, Redis)", score: 8.8, benchmark: 8.0 },
-            { label: "DevOps & CI/CD", score: 8.5, benchmark: 7.5 },
-            { label: "Product Strategy Alignment", score: 7.9, benchmark: 8.2 }
-          ]}
-        />
-      </div>
-
-      {/* Action Bar Dashboard */}
-      <div className="fixed bottom-6 md:bottom-10 left-4 right-4 md:left-[calc(50%+144px)] md:-translate-x-1/2 w-auto md:w-[calc(100%-288px)] max-w-6xl bg-white border border-border shadow-lg p-3 md:p-5 rounded-3xl md:rounded-[32px] flex items-center justify-between z-50 animate-in slide-in-from-bottom-10">
-        <div className="flex items-center gap-2 md:gap-4 lg:pl-6">
-           <span className="hidden sm:inline text-[9px] md:text-[10px] font-extrabold text-primary/40 uppercase tracking-[0.2em] whitespace-nowrap">Status:</span>
-           <div className="flex items-center gap-2 bg-primary text-white px-3 md:px-5 py-2 md:py-2.5 rounded-2xl">
-              <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest">Active Search</span>
-           </div>
+      {/* Action Bar */}
+      {onStatusChange && applicant.id && (
+        <div className="sticky bottom-0 bg-white border-t border-border p-5 flex items-center justify-between gap-4 mt-auto">
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            <Star className="w-3.5 h-3.5 text-accent" />
+            Update Status
+          </div>
+          <div className="flex gap-3">
+            {applicant.workflowStatus !== "rejected" && (
+              <button
+                onClick={() => onStatusChange(applicant.id!, "rejected")}
+                className="px-5 py-2.5 rounded-xl border border-red-200 text-red-600 text-[10px] font-black uppercase tracking-wider hover:bg-red-50 transition-all"
+              >
+                Reject
+              </button>
+            )}
+            {applicant.workflowStatus !== "shortlisted" && (
+              <button
+                onClick={() => onStatusChange(applicant.id!, "shortlisted")}
+                className="px-5 py-2.5 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+              >
+                Shortlist
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex gap-2 md:gap-4">
-           <button className="hidden sm:block btn-secondary btn-md text-red-500 border-red-100 hover:bg-red-50">Reject</button>
-           <button className="btn-secondary btn-md border-primary text-primary">Shortlist</button>
-        </div>
-      </div>
-
+      )}
     </div>
   );
 }
