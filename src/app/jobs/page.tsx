@@ -1,98 +1,117 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { JobPostingRow } from "@/features/dashboard/components/JobPostingRow";
 import { Plus, Search, Filter, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/context/AuthContext";
+import {
+  deleteJob,
+  fetchJobs,
+  filterJobsForRecruiter,
+  type JobRecord,
+} from "@/services/jobsService";
 
 export default function JobsPage() {
+  const { accessToken, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  
-  const jobs = [
-    {
-      title: "Senior Frontend Engineer",
-      department: "Engineering",
-      type: "Full-time",
-      location: "Kigali / Remote",
-      progress: 82,
-      applicants: 62,
-      matched: 12,
-      icon: "code" as const,
-    },
-    {
-      title: "Product Designer",
-      department: "Design",
-      type: "Contract",
-      location: "Remote",
-      progress: 55,
-      applicants: 31,
-      matched: 8,
-      icon: "design" as const,
-    },
-    {
-      title: "Data Analyst",
-      department: "Operations",
-      type: "Full-time",
-      location: "Hybrid",
-      progress: 40,
-      applicants: 93,
-      matched: 14,
-      icon: "research" as const,
-    },
-    {
-      title: "Backend Engineer",
-      department: "Engineering",
-      type: "Full-time",
-      location: "Remote",
-      progress: 18,
-      applicants: 19,
-      matched: 4,
-      icon: "code" as const,
-    },
-  ];
+  const [jobs, setJobs] = useState<JobRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredJobs = jobs.filter(job => 
-    job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    job.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    job.location.toLowerCase().includes(searchQuery.toLowerCase())
+  useEffect(() => {
+    let isActive = true;
+
+    const loadJobs = async () => {
+      try {
+        setError(null);
+        const allJobs = await fetchJobs();
+        if (isActive) {
+          setJobs(filterJobsForRecruiter(allJobs, user?.id));
+        }
+      } catch (loadError) {
+        if (isActive) {
+          setError(
+            loadError instanceof Error ? loadError.message : "We couldn't load your job board.",
+          );
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadJobs();
+
+    return () => {
+      isActive = false;
+    };
+  }, [user?.id]);
+
+  const filteredJobs = useMemo(
+    () =>
+      jobs.filter((job) =>
+        [job.title, job.department, job.location]
+          .join(" ")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()),
+      ),
+    [jobs, searchQuery],
   );
+
+  const handleDeleteJob = async (jobId: string) => {
+    if (!accessToken) {
+      setError("Your session expired. Sign in again to delete a job.");
+      return;
+    }
+
+    try {
+      await deleteJob(accessToken, jobId);
+      setJobs((current) => current.filter((job) => job.id !== jobId));
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error ? deleteError.message : "We couldn't delete this job.",
+      );
+    }
+  };
 
   return (
     <div className="mx-auto max-w-6xl space-y-12 pb-10">
       <section className="relative overflow-hidden p-1 bg-primary rounded-[3rem] shadow-2xl shadow-primary/10">
         <div className="bg-white rounded-[2.8rem] p-8 md:p-12 grid gap-10 md:grid-cols-[1.4fr_0.8fr]">
-           <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-accent/10 rounded-full">
-                <Sparkles className="w-3 h-3 text-accent" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-accent">Intelligent Sourcing</span>
-              </div>
-              <h2 className="text-4xl md:text-5xl font-black text-primary tracking-tighter leading-[1.1]">Build roles recruiters <span className="text-accent underline decoration-accent/20 underline-offset-8">trust.</span></h2>
-              <p className="text-muted-foreground font-medium text-lg leading-relaxed max-w-xl">
-                 Capture the exact signals needed for high-fidelity AI screening. Define your scoring blueprint early to ensure explainable shortlists.
-              </p>
-           </div>
-           <div className="bg-secondary/50 rounded-[2.5rem] p-8 border border-border/50 self-center">
-              <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-6">Suggested Blueprint</h4>
-              <div className="space-y-4">
-                 {[
-                   { label: "Skills Fit", val: 40 },
-                   { label: "Experience", val: 30 },
-                   { label: "Relevance", val: 20 },
-                   { label: "Education", val: 10 },
-                 ].map((s) => (
-                   <div key={s.label} className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                         <span>{s.label}</span>
-                         <span className="text-accent">{s.val}%</span>
-                      </div>
-                      <div className="h-1.5 bg-white rounded-full overflow-hidden">
-                         <div className="h-full bg-accent rounded-full" style={{ width: `${s.val}%` }}></div>
-                      </div>
-                   </div>
-                 ))}
-              </div>
-           </div>
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-accent/10 rounded-full">
+              <Sparkles className="w-3 h-3 text-accent" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-accent">Intelligent Sourcing</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-black text-primary tracking-tighter leading-[1.1]">Build roles recruiters <span className="text-accent underline decoration-accent/20 underline-offset-8">trust.</span></h2>
+            <p className="text-muted-foreground font-medium text-lg leading-relaxed max-w-xl">
+              Capture the exact signals needed for high-fidelity AI screening. Define your scoring
+              blueprint early to ensure explainable shortlists.
+            </p>
+          </div>
+          <div className="bg-secondary/50 rounded-[2.5rem] p-8 border border-border/50 self-center">
+            <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-6">Saved from backend</h4>
+            <div className="space-y-4">
+              {[
+                { label: "Live roles", val: jobs.length, suffix: "" },
+                { label: "Filtered roles", val: filteredJobs.length, suffix: "" },
+                { label: "Screening ready", val: jobs.filter((job) => job.skills.length > 0).length, suffix: "" },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center justify-between rounded-2xl bg-white px-4 py-3">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary/70">
+                    {item.label}
+                  </span>
+                  <span className="text-sm font-black text-accent">
+                    {item.val}
+                    {item.suffix}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -100,17 +119,24 @@ export default function JobsPage() {
         <div>
           <h3 className="text-3xl font-black text-primary tracking-tight">Active Job Board</h3>
           <p className="text-muted-foreground font-medium mt-1">
-            Managing <span className="text-primary font-black underline decoration-accent/30 underline-offset-4">{filteredJobs.length}</span> positions with live screening pipelines.
+            Managing{" "}
+            <span className="text-primary font-black underline decoration-accent/30 underline-offset-4">
+              {filteredJobs.length}
+            </span>{" "}
+            positions with live backend data.
           </p>
         </div>
-        <Link
-          href="/jobs/create"
-          className="btn-primary btn-lg gap-3"
-        >
+        <Link href="/jobs/create" className="btn-primary btn-lg gap-3">
           <Plus className="h-5 w-5" />
           Create new brief
         </Link>
       </div>
+
+      {error && (
+        <div className="rounded-[1.5rem] border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
+          {error}
+        </div>
+      )}
 
       <div className="flex items-center gap-4">
         <div className="relative flex-1 group">
@@ -123,7 +149,7 @@ export default function JobsPage() {
             className="w-full rounded-[1.5rem] border border-border/50 bg-white py-4 pl-14 pr-12 text-sm font-medium outline-none transition-all focus:ring-4 focus:ring-primary/5 focus:border-primary/20 shadow-sm"
           />
           {searchQuery && (
-            <button 
+            <button
               onClick={() => setSearchQuery("")}
               className="absolute right-5 top-1/2 -translate-y-1/2 p-2 hover:bg-secondary rounded-xl transition-all"
             >
@@ -137,37 +163,58 @@ export default function JobsPage() {
         </button>
       </div>
 
-      <div className="space-y-6">
-        <AnimatePresence mode="popLayout">
-          {filteredJobs.map((job, i) => (
-            <motion.div
-              key={job.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ delay: i * 0.05 }}
-            >
-              <JobPostingRow {...job} />
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        
-        {filteredJobs.length === 0 && (
-          <div className="py-20 text-center space-y-4">
-             <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mx-auto mb-6">
+      {isLoading ? (
+        <div className="soft-panel p-12 text-center">
+          <h4 className="text-xl font-black text-primary">Loading your jobs</h4>
+          <p className="mt-2 text-sm text-muted-foreground font-medium">
+            Pulling the latest role briefs from the backend.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <AnimatePresence mode="popLayout">
+            {filteredJobs.map((job, i) => (
+              <motion.div
+                key={job.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ delay: i * 0.05 }}
+              >
+                <JobPostingRow {...job} onDelete={handleDeleteJob} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          {!isLoading && filteredJobs.length === 0 && (
+            <div className="py-20 text-center space-y-4">
+              <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mx-auto mb-6">
                 <Search className="w-8 h-8 text-muted-foreground" />
-             </div>
-             <h4 className="text-xl font-black text-primary">No positions found</h4>
-             <p className="text-muted-foreground max-w-xs mx-auto">We couldn&apos;t find any job briefs matching &quot;{searchQuery}&quot;. Try a different keyword.</p>
-             <button 
-              onClick={() => setSearchQuery("")}
-              className="text-accent font-black text-xs uppercase tracking-widest hover:underline pt-4"
-             >
-               Clear search filter
-             </button>
-          </div>
-        )}
-      </div>
+              </div>
+              <h4 className="text-xl font-black text-primary">
+                {jobs.length === 0 ? "No jobs created yet" : "No positions found"}
+              </h4>
+              <p className="text-muted-foreground max-w-xs mx-auto">
+                {jobs.length === 0
+                  ? "Create your first role brief to start the recruiter pipeline."
+                  : `We couldn&apos;t find any job briefs matching "${searchQuery}". Try a different keyword.`}
+              </p>
+              {jobs.length === 0 ? (
+                <Link href="/jobs/create" className="btn-primary btn-md inline-flex mt-4">
+                  Create first job
+                </Link>
+              ) : (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="text-accent font-black text-xs uppercase tracking-widest hover:underline pt-4"
+                >
+                  Clear search filter
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

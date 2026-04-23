@@ -6,6 +6,7 @@ import { ConfirmationModal } from "@/components/common/ConfirmationModal";
 import { cn } from "@/utils/cn";
 
 interface JobPostingRowProps {
+  id: string;
   title: string;
   department: string;
   type: string;
@@ -14,6 +15,7 @@ interface JobPostingRowProps {
   applicants: number;
   matched: number;
   icon: "code" | "design" | "research";
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 const icons = {
@@ -23,6 +25,7 @@ const icons = {
 };
 
 export function JobPostingRow({ 
+  id,
   title, 
   department, 
   type, 
@@ -30,7 +33,8 @@ export function JobPostingRow({
   progress, 
   applicants, 
   matched, 
-  icon 
+  icon,
+  onDelete,
 }: JobPostingRowProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -48,7 +52,6 @@ export function JobPostingRow({
   }, []);
 
   const Icon = icons[icon];
-  const slug = title.toLowerCase().replace(/ /g, "-");
   const actionHref = progress === 100 ? "/shortlists" : `/screening?role=${encodeURIComponent(title)}`;
   const actionLabel = progress === 100 ? "Review shortlist" : "Start screening";
   const actionClassName = progress === 100 ? "btn-primary" : "btn-accent";
@@ -129,7 +132,7 @@ export function JobPostingRow({
                   Expire Job
                 </button>
                 <Link 
-                  href={`/jobs/edit/${slug}`}
+                  href={`/jobs/edit/${id}`}
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-primary hover:bg-secondary rounded-none transition-all"
                 >
                   <Edit3 className="w-4 h-4 text-accent" />
@@ -152,7 +155,11 @@ export function JobPostingRow({
       <ConfirmationModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        onConfirm={() => console.log("Deleting job:", title)}
+        onConfirm={() => {
+          if (onDelete) {
+            void onDelete(id);
+          }
+        }}
         title="Delete this job?"
         description={`This action will permanently remove the "${title}" job brief and all related candidate screening data. This cannot be undone.`}
         confirmLabel="Yes, Delete Job"
@@ -171,4 +178,3 @@ export function JobPostingRow({
     </div>
   );
 }
-
