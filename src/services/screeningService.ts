@@ -1,6 +1,6 @@
 "use client";
 
-const API_BASE_URL = "http://localhost:2000/api";
+import { API_BASE_URL } from "@/services/api";
 
 export interface RankedCandidate {
   rank: number;

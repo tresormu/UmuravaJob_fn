@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { PremiumLink } from "@/components/common/PremiumLink";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUI } from "@/context/UIContext";
+import { useAuth } from "@/context/AuthContext";
 
 interface HeaderProps {
   // onMenuClick and onAIChatClick are now handled via useUI context
@@ -18,10 +19,14 @@ const mockNotifications = [
 
 export function Header({}: HeaderProps) {
   const { setIsSidebarOpen, setIsAIChatOpen } = useUI();
+  const { user, logout } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const notificationRef = useRef<HTMLDivElement>(null);
+  const profileInitial = user?.firstName?.charAt(0).toUpperCase() ?? "U";
+  const profileName = user?.fullName ?? "Recruiter";
+  const profileEmail = user?.email ?? "recruiter@umurava.ai";
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -131,7 +136,7 @@ export function Header({}: HeaderProps) {
             <div className="flex items-center gap-3 ml-1 md:ml-2 border-l pl-3 md:pl-6 border-border/50 cursor-pointer">
               <div className="relative">
                 <div className="w-10 h-10 rounded-2xl bg-secondary flex items-center justify-center text-primary font-black group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm border border-border/50">
-                  S
+                  {profileInitial}
                 </div>
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
               </div>
@@ -146,8 +151,8 @@ export function Header({}: HeaderProps) {
                   className="absolute right-0 mt-2 w-48 bg-white border border-border/50 rounded-2xl shadow-2xl shadow-black/10 overflow-hidden z-50 p-1"
                 >
                   <div className="p-3 border-b border-border/30 mb-1">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Shema Aimé</p>
-                    <p className="text-[9px] text-muted-foreground font-medium truncate">shema.aime@umurava.africa</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{profileName}</p>
+                    <p className="text-[9px] text-muted-foreground font-medium truncate">{profileEmail}</p>
                   </div>
                   <div className="space-y-0.5">
                     <PremiumLink href="/profile" className="flex items-center gap-2 p-2.5 text-[11px] font-black uppercase tracking-widest text-primary hover:bg-secondary rounded-xl transition-all">
@@ -157,7 +162,7 @@ export function Header({}: HeaderProps) {
                       Settings
                     </PremiumLink>
                     <button 
-                      onClick={() => alert("Logging out...")}
+                      onClick={() => void logout()}
                       className="w-full flex items-center gap-2 p-2.5 text-[11px] font-black uppercase tracking-widest text-red-600 hover:bg-red-50 rounded-xl transition-all"
                     >
                       Logout

@@ -24,7 +24,21 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     isAIChatOpen,
     setIsAIChatOpen
   } = useUI();
-  const { isLoggedIn, isFirstLogin } = useAuth();
+  const { isLoggedIn, isFirstLogin, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="h-screen w-full bg-background flex items-center justify-center px-6">
+        <div className="text-center space-y-3">
+          <p className="text-[10px] uppercase tracking-[0.3em] font-black text-primary/60">Umurava AI</p>
+          <h1 className="text-2xl font-black text-primary">Loading workspace</h1>
+          <p className="text-sm text-muted-foreground font-medium">
+            Your recruiter session is being prepared.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // If not logged in or in onboarding, show a clean layout without the app shell chrome
   if (!isLoggedIn || isFirstLogin) {
@@ -56,4 +70,3 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-

@@ -16,6 +16,9 @@
 # production
 /build
 
+# local nested repos
+/UmuravaJob_bn/
+
 # misc
 .DS_Store
 *.pem
