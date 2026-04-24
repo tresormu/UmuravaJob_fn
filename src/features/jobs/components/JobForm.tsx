@@ -99,7 +99,7 @@ export function JobForm({
               ? "border-red-200 bg-red-50 text-red-700"
               : feedback.tone === "success"
                 ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border-blue-200 bg-blue-50 text-blue-700"
+                : "border-primary/20 bg-primary/5 text-primary"
           }`}
         >
           {feedback.message}

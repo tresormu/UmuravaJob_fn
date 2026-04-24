@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, Sparkles, User, BrainCircuit, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/utils/cn";
 import { chatWithAI } from "@/services/applicantsService";
 
@@ -25,6 +26,7 @@ export function AiChatDrawer({ isOpen, onClose, jobId, accessToken, jobTitle }: 
     const [isLoading, setIsLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const messagesRef = useRef<Message[]>([]);
+    const router = useRouter();
 
     useEffect(() => {
         messagesRef.current = messages;
@@ -51,6 +53,11 @@ export function AiChatDrawer({ isOpen, onClose, jobId, accessToken, jobTitle }: 
         try {
             const history = messagesRef.current;
             const response = await chatWithAI(accessToken, jobId, input, history);
+
+            if (response.navigate) {
+                router.push(response.navigate);
+                onClose();
+            }
 
             const aiMessage: Message = {
                 role: "model",

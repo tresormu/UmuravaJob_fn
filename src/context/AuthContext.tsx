@@ -14,6 +14,8 @@ import {
   registerRecruiter,
   resendRecruiterVerification,
   verifyRecruiterEmail,
+  requestAccountDeletion,
+  confirmAccountDeletion,
 } from "@/services/authService";
 
 const AUTH_SESSION_KEY = "umurava_auth_session";
@@ -30,6 +32,8 @@ interface AuthContextType {
   verifyEmail: (input: VerifyEmailInput) => Promise<string>;
   resendVerificationCode: (email: string) => Promise<string>;
   logout: () => Promise<void>;
+  requestDeleteAccount: () => Promise<string>;
+  confirmDeleteAccount: (code: string) => Promise<void>;
   completeOnboarding: () => void;
   updateUser: (userData: RecruiterUser) => void;
 }
@@ -99,7 +103,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     persistSession(nextSession);
 
     const onboardingDone = localStorage.getItem(ONBOARDING_KEY);
-    setIsFirstLogin(!onboardingDone);
+    const pendingOnboarding = localStorage.getItem("umurava_pending_onboarding");
+    if (!onboardingDone || pendingOnboarding) {
+      setIsFirstLogin(true);
+      localStorage.removeItem("umurava_pending_onboarding");
+    }
 
     return message;
   };
@@ -109,7 +117,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const verifyEmail = async (input: VerifyEmailInput) => {
-    return verifyRecruiterEmail(input);
+    const { message, session: nextSession } = await verifyRecruiterEmail(input);
+
+    const onboardingDone = localStorage.getItem(ONBOARDING_KEY);
+
+    if (nextSession) {
+      setSession(nextSession);
+      persistSession(nextSession);
+      if (!onboardingDone) setIsFirstLogin(true);
+    } else {
+      // Backend didn't return a session — store a flag so the app shows
+      // onboarding after the user logs in manually.
+      if (!onboardingDone) localStorage.setItem("umurava_pending_onboarding", "true");
+    }
+
+    return message;
   };
 
   const resendVerificationCode = async (email: string) => {
@@ -128,6 +150,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
     setIsFirstLogin(false);
     clearPersistedSession();
+    localStorage.removeItem("umurava_pending_onboarding");
+  };
+
+  const requestDeleteAccount = async () => {
+    if (!session?.accessToken) throw new Error("Not authenticated");
+    return requestAccountDeletion(session.accessToken);
+  };
+
+  const confirmDeleteAccount = async (code: string) => {
+    if (!session?.accessToken) throw new Error("Not authenticated");
+    await confirmAccountDeletion(session.accessToken, code);
+    setSession(null);
+    setIsFirstLogin(false);
+    clearPersistedSession();
+    localStorage.removeItem("umurava_pending_onboarding");
   };
 
   const completeOnboarding = () => {
@@ -156,6 +193,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         verifyEmail,
         resendVerificationCode,
         logout,
+        requestDeleteAccount,
+        confirmDeleteAccount,
         completeOnboarding,
         updateUser,
       }}

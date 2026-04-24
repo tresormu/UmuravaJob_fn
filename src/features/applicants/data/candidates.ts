@@ -82,8 +82,8 @@ export const screeningCandidates: CandidateProfile[] = [
     summary: "Resume, passport photo, and government ID are fully verified and ready for AI screening.",
     passportPhoto: {
       initials: "ER",
-      frameClassName: "from-[#0f4c5c] via-[#157a6e] to-[#f4a259]",
-      glowClassName: "shadow-[0_20px_45px_rgba(15,76,92,0.22)]",
+      frameClassName: "bg-primary",
+      glowClassName: "shadow-primary/20",
     },
   },
   {
@@ -128,8 +128,8 @@ export const screeningCandidates: CandidateProfile[] = [
     summary: "Resume and passport image are present, with one previous role still waiting on manual reference notes.",
     passportPhoto: {
       initials: "MT",
-      frameClassName: "from-[#1d3557] via-[#457b9d] to-[#a8dadc]",
-      glowClassName: "shadow-[0_20px_45px_rgba(29,53,87,0.22)]",
+      frameClassName: "bg-primary",
+      glowClassName: "shadow-primary/20",
     },
   },
   {
@@ -174,8 +174,8 @@ export const screeningCandidates: CandidateProfile[] = [
     summary: "Resume and identity documents are uploaded; AI can score immediately while the recruiter reviews architecture depth.",
     passportPhoto: {
       initials: "SC",
-      frameClassName: "from-[#7c3aed] via-[#ec4899] to-[#f59e0b]",
-      glowClassName: "shadow-[0_20px_45px_rgba(124,58,237,0.2)]",
+      frameClassName: "bg-primary",
+      glowClassName: "shadow-primary/20",
     },
   },
   {
@@ -220,8 +220,8 @@ export const screeningCandidates: CandidateProfile[] = [
     summary: "All documents are complete and the profile is ready to compare against backend-heavy screening prompts.",
     passportPhoto: {
       initials: "DO",
-      frameClassName: "from-[#264653] via-[#2a9d8f] to-[#e9c46a]",
-      glowClassName: "shadow-[0_20px_45px_rgba(38,70,83,0.2)]",
+      frameClassName: "bg-primary",
+      glowClassName: "shadow-primary/20",
     },
   },
   {
@@ -266,8 +266,8 @@ export const screeningCandidates: CandidateProfile[] = [
     summary: "Documents are complete, but the recruiter should retarget the prompt toward design screening before ranking.",
     passportPhoto: {
       initials: "AH",
-      frameClassName: "from-[#5f0f40] via-[#9a031e] to-[#fb8b24]",
-      glowClassName: "shadow-[0_20px_45px_rgba(95,15,64,0.2)]",
+      frameClassName: "bg-primary",
+      glowClassName: "shadow-primary/20",
     },
   },
 ];

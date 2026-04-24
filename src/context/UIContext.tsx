@@ -10,6 +10,8 @@ interface UIContextType {
   setIsSidebarOpen: (open: boolean) => void;
   isSidebarCollapsed: boolean;
   toggleSidebarCollapse: () => void;
+  pendingToast: string | null;
+  setPendingToast: (message: string | null) => void;
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined);
@@ -18,6 +20,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [pendingToast, setPendingToast] = useState<string | null>(null);
 
   const toggleAIChat = useCallback(() => setIsAIChatOpen(prev => !prev), []);
   const toggleSidebarCollapse = useCallback(() => setIsSidebarCollapsed(prev => !prev), []);
@@ -32,6 +35,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         setIsSidebarOpen,
         isSidebarCollapsed,
         toggleSidebarCollapse,
+        pendingToast,
+        setPendingToast,
       }}
     >
       {children}

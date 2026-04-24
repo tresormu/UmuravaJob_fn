@@ -61,6 +61,12 @@ interface MessageResponse {
   message: string;
 }
 
+interface VerifyResponse extends MessageResponse {
+  accessToken?: string;
+  refreshToken?: string;
+  recruiter?: BackendRecruiter;
+}
+
 interface RefreshResponse extends MessageResponse {
   accessToken: string;
   refreshToken: string;
@@ -127,13 +133,27 @@ export async function registerRecruiter(input: RegisterInput): Promise<string> {
   return response.message;
 }
 
-export async function verifyRecruiterEmail(input: VerifyEmailInput): Promise<string> {
-  const response = await apiRequest<MessageResponse>("/recruiters/auth/verify-email", {
+export async function verifyRecruiterEmail(input: VerifyEmailInput): Promise<{
+  message: string;
+  session?: AuthSession;
+}> {
+  const response = await apiRequest<VerifyResponse>("/recruiters/auth/verify-email", {
     method: "POST",
     body: input,
   });
 
-  return response.message;
+  if (response.accessToken && response.refreshToken && response.recruiter) {
+    return {
+      message: response.message,
+      session: {
+        user: mapRecruiter(response.recruiter),
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      },
+    };
+  }
+
+  return { message: response.message };
 }
 
 export async function resendRecruiterVerification(email: string): Promise<string> {
@@ -183,4 +203,22 @@ export async function updateRecruiter(
   );
 
   return mapRecruiter(response.recruiter);
+}
+
+
+export async function requestAccountDeletion(accessToken: string): Promise<string> {
+  const response = await apiRequest<MessageResponse>("/recruiters/auth/request-delete", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return response.message;
+}
+
+export async function confirmAccountDeletion(accessToken: string, code: string): Promise<string> {
+  const response = await apiRequest<MessageResponse>("/recruiters/auth/confirm-delete", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: { code },
+  });
+  return response.message;
 }

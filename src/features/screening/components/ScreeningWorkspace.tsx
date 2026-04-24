@@ -126,8 +126,8 @@ export function ScreeningWorkspace({ role }: ScreeningWorkspaceProps) {
           tags: app.tags,
           passportPhoto: {
             initials: app.name.split(" ").map(n => n[0] ?? "").join("").slice(0, 2).toUpperCase(),
-            frameClassName: "from-blue-600 to-indigo-600",
-            glowClassName: "shadow-blue-500/20",
+            frameClassName: "bg-primary",
+            glowClassName: "shadow-primary/20",
           },
         }));
         setDisplayApplicants(mapped);
@@ -380,12 +380,12 @@ export function ScreeningWorkspace({ role }: ScreeningWorkspaceProps) {
 
             <div className="mt-6 space-y-4 text-sm text-white/80">
               <div className="flex items-start gap-3">
-                <ShieldCheck className="mt-0.5 h-4 w-4 text-[#f4a259]" />
+                <ShieldCheck className="mt-0.5 h-4 w-4 text-white" />
                 <p>AI recommendations stay advisory and the recruiter maintains final oversight.</p>
               </div>
               {isScreened && (
                 <div className="flex items-start gap-3">
-                  <Zap className="mt-0.5 h-4 w-4 text-[#f4a259]" />
+                  <Zap className="mt-0.5 h-4 w-4 text-white" />
                   <p>Matches are prioritized based on your strategic screening prompt.</p>
                 </div>
               )}
@@ -767,7 +767,7 @@ export function ScreeningWorkspace({ role }: ScreeningWorkspaceProps) {
                   animate={{
                     scale: [1, 1.1, 1],
                     rotate: [0, 90, 180, 270, 360],
-                    borderColor: ["rgba(124, 58, 237, 0.2)", "rgba(236, 72, 153, 0.4)", "rgba(124, 58, 237, 0.2)"]
+                    borderColor: ["rgba(58, 115, 217, 0.2)", "rgba(58, 115, 217, 0.4)", "rgba(58, 115, 217, 0.2)"]
                   }}
                   transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
                   className="absolute inset-0 rounded-[2.5rem] border-2 border-primary/20"
@@ -791,7 +791,7 @@ export function ScreeningWorkspace({ role }: ScreeningWorkspaceProps) {
                     transition={{ duration: 10 + i * 2, repeat: Infinity, ease: "linear" }}
                     className="absolute inset-0"
                   >
-                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-accent shadow-[0_0_10px_rgba(244,162,89,0.8)]" />
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(58,115,217,0.8)]" />
                   </motion.div>
                 ))}
               </div>

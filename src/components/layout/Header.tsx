@@ -6,6 +6,7 @@ import { PremiumLink } from "@/components/common/PremiumLink";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUI } from "@/context/UIContext";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 interface HeaderProps {
   // onMenuClick and onAIChatClick are now handled via useUI context
@@ -18,8 +19,15 @@ const mockNotifications = [
 ];
 
 export function Header({}: HeaderProps) {
-  const { setIsSidebarOpen, setIsAIChatOpen } = useUI();
+  const { setIsSidebarOpen, setIsAIChatOpen, setPendingToast } = useUI();
   const { user, logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    setPendingToast("You've been logged out successfully.");
+    await logout();
+    router.push("/");
+  };
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -162,7 +170,7 @@ export function Header({}: HeaderProps) {
                       Settings
                     </PremiumLink>
                     <button 
-                      onClick={() => void logout()}
+                      onClick={() => void handleLogout()}
                       className="w-full flex items-center gap-2 p-2.5 text-[11px] font-black uppercase tracking-widest text-red-600 hover:bg-red-50 rounded-xl transition-all"
                     >
                       Logout

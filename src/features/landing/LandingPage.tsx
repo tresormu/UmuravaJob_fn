@@ -3,8 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Sparkles, Cpu, Zap, Shield, Search, BarChart3, Users, Globe, ArrowRight } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { Sparkles, Cpu, Zap, Shield, Search, BarChart3, Users, Globe } from "lucide-react";
 
 export function LandingPage({ onGetStarted }: { onGetStarted: () => void }) {
   return (
@@ -87,7 +86,7 @@ export function LandingPage({ onGetStarted }: { onGetStarted: () => void }) {
               priority
               className="w-full h-auto rounded-[2.8rem] grayscale opacity-80"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+
           </motion.div>
         </div>
       </section>

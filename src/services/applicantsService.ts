@@ -249,7 +249,7 @@ export async function chatWithAI(
   jobId: string,
   message: string,
   history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = []
-): Promise<{ message: string }> {
+): Promise<{ message: string; navigate?: string }> {
   return apiRequest(`/recruiter/chat/${jobId}`, {
     method: "POST",
     headers: withAuthHeaders(accessToken),

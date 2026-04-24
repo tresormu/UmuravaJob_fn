@@ -128,14 +128,14 @@ export function JobPostingRow({
                   onClick={() => { setShowMenu(false); setShowExpireModal(true); }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-primary hover:bg-secondary rounded-none transition-all"
                 >
-                  <Hourglass className="w-4 h-4 text-blue-500" />
+                  <Hourglass className="w-4 h-4 text-primary" />
                   Expire Job
                 </button>
                 <Link 
                   href={`/jobs/edit/${id}`}
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-primary hover:bg-secondary rounded-none transition-all"
                 >
-                  <Edit3 className="w-4 h-4 text-accent" />
+                  <Edit3 className="w-4 h-4 text-primary" />
                   Update Job
                 </Link>
                 <div className="my-1 border-t border-border/30" />

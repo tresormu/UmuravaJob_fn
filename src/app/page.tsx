@@ -1,14 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useUI } from "@/context/UIContext";
 import { LandingPage } from "@/features/landing/LandingPage";
 import { AuthPage } from "@/features/auth/AuthPage";
 import { OnboardingFlow } from "@/features/onboarding/OnboardingFlow";
 import { Dashboard } from "@/features/dashboard/Dashboard";
+import { Toast } from "@/components/common/Toast";
+import { useState } from "react";
 
 export default function Home() {
   const { isLoggedIn, isFirstLogin, isLoading } = useAuth();
+  const { pendingToast, setPendingToast } = useUI();
   const [showAuth, setShowAuth] = useState(false);
 
   if (isLoading) {
@@ -30,7 +34,14 @@ export default function Home() {
     if (showAuth) {
       return <AuthPage />;
     }
-    return <LandingPage onGetStarted={() => setShowAuth(true)} />;
+    return (
+      <>
+        <LandingPage onGetStarted={() => setShowAuth(true)} />
+        {pendingToast && (
+          <Toast message={pendingToast} type="success" onClose={() => setPendingToast(null)} />
+        )}
+      </>
+    );
   }
 
   // 2. If user just registered, show the Onboarding Flow

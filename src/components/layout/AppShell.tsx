@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { AIChatSidebar } from "@/components/common/AIChatSidebar";
 import { UIProvider, useUI } from "@/context/UIContext";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter, usePathname } from "next/navigation";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -14,6 +15,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </UIProvider>
   );
 }
+
+const PUBLIC_PATHS = ["/"];
 
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const { 
@@ -25,6 +28,14 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     setIsAIChatOpen
   } = useUI();
   const { isLoggedIn, isFirstLogin, isLoading } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (!isLoading && !isLoggedIn && !PUBLIC_PATHS.includes(pathname)) {
+      router.replace("/");
+    }
+  }, [isLoading, isLoggedIn, pathname, router]);
 
   if (isLoading) {
     return (

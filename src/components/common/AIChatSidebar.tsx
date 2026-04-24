@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, X, Send, Bot, User, MessageCircle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/utils/cn";
 import { useAuth } from "@/context/AuthContext";
 import { chatWithAI } from "@/services/applicantsService";
@@ -21,6 +22,7 @@ interface AIChatSidebarProps {
 
 export function AIChatSidebar({ isOpen, onClose }: AIChatSidebarProps) {
   const { accessToken, user } = useAuth();
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "Hello! I'm your Umurava AI assistant. How can I help you with your hiring pipeline today?" }
   ]);
@@ -70,6 +72,11 @@ export function AIChatSidebar({ isOpen, onClose }: AIChatSidebarProps) {
     try {
       const response = await chatWithAI(accessToken, selectedJobId, currentInput, historySnapshot);
       
+      if (response.navigate) {
+        router.push(response.navigate);
+        onClose();
+      }
+
       const aiMessage: Message = { 
         role: "assistant", 
         content: response.message 

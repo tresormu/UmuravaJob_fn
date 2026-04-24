@@ -12,7 +12,7 @@ const activities = [
     description: "Jean Claude N. just applied for the Senior Frontend Engineer position.",
     time: "2 minutes ago",
     icon: UserPlus,
-    color: "bg-blue-500",
+    color: "bg-primary",
   },
   {
     id: 2,

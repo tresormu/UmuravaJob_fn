@@ -83,20 +83,13 @@ export function AuthPage() {
         return;
       }
 
-      const verifyMessage = await verifyEmail({
+      await verifyEmail({
         email: formData.email.trim(),
         code: formData.verificationCode.trim(),
       });
-
-      try {
-        await login(formData.email.trim(), formData.password);
-      } catch {
-        setMode("login");
-        setFeedback({
-          tone: "success",
-          message: `${verifyMessage} Your email is verified now. Sign in to continue.`,
-        });
-      }
+      
+      // No need to manually login here; verifyEmail sets the session in AuthContext.
+      // The app will automatically redirect to Dashboard/Onboarding via page.tsx.
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Something went wrong. Please try again.";
@@ -171,7 +164,7 @@ export function AuthPage() {
                   "rounded-2xl border px-4 py-3 text-sm font-medium",
                   feedback.tone === "error" && "border-red-200 bg-red-50 text-red-700",
                   feedback.tone === "success" && "border-emerald-200 bg-emerald-50 text-emerald-700",
-                  feedback.tone === "info" && "border-blue-200 bg-blue-50 text-blue-700",
+                  feedback.tone === "info" && "border-primary/20 bg-primary/5 text-primary",
                 )}
               >
                 {feedback.message}
